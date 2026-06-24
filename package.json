@@ -1,0 +1,16 @@
+{
+  "name": "consumermind",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ConsumerMind — SaaS de psicología del consumidor (Next.js + Express + PostgreSQL)",
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "db:migrate": "npm run db:migrate --workspace=apps/server"
+  }
+}

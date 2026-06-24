@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+.DS_Store
+*.local
+
+# Secretos — nunca commitear
+.env
+.env.*
+!.env.example
