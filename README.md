@@ -1,5 +1,12 @@
 # ConsumerMind
 
+![Licencia: Propietaria](https://img.shields.io/badge/licencia-propietaria-red)
+![Estado: Privado](https://img.shields.io/badge/uso-privado-lightgrey)
+
+> ⚠️ **Repositorio propietario.** El código es visible con fines de demostración,
+> pero **NO es de código abierto**: todos los derechos reservados. No se concede
+> permiso de uso, copia ni distribución. Ver [LICENSE](LICENSE).
+
 SaaS de psicología del consumidor. Un **motor psicológico compartido** (Claude API)
 alimenta varios módulos: **Strategy** detecta los sesgos cognitivos de un caso y
 **Copy Studio** genera copy/ángulos que activan exactamente esos sesgos. Multi-tenant
@@ -88,4 +95,14 @@ a partir del análisis).
 - Estructura de planes pagos (`workspaces.plan`: free | pro | agency).
 - Autenticación real (NextAuth): hoy el tenant se simula con `x-workspace-id` / `x-user-id`
   (ver `apps/web/lib/tenant.js` + `apps/server/db/seed.sql`).
-```
+
+## Licencia
+
+**Propietaria — Todos los derechos reservados.** © 2026 Andrés Osorio.
+
+Este repositorio es código privado y confidencial. Que sea visible en GitHub
+**no** lo convierte en código abierto: queda prohibido usar, copiar, modificar,
+redistribuir o desplegar el código sin permiso previo por escrito del titular.
+Consulta el archivo [LICENSE](LICENSE) para los términos completos.
+
+Para solicitar permisos de uso: osorioandhres1998@gmail.com
