@@ -13,12 +13,18 @@ CREATE TABLE IF NOT EXISTS workspaces (
 );
 
 CREATE TABLE IF NOT EXISTS users (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  email        TEXT NOT NULL UNIQUE,
-  role         TEXT NOT NULL DEFAULT 'member',
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  email         TEXT NOT NULL UNIQUE,
+  name          TEXT,
+  password_hash TEXT,                          -- bcrypt; null si entra solo por OAuth
+  role          TEXT NOT NULL DEFAULT 'member', -- owner | editor | viewer | member
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Para bases ya creadas con el esquema anterior:
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
 -- Tabla central: resultados del motor psicológico, reusables
 -- entre módulos (Strategy escribe, Copy Studio lee y también escribe).

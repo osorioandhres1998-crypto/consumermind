@@ -1,31 +1,35 @@
-'use client';
-
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { auth, signOut } from '../auth';
 
-const links = [
-  { href: '/', label: 'Inicio' },
-  { href: '/strategy', label: 'Strategy' },
-  { href: '/copy-studio', label: 'Copy Studio' },
-];
+export default async function Nav() {
+  const session = await auth();
 
-export default function Nav() {
-  const path = usePathname();
   return (
     <nav className="nav">
-      <Link href="/" className="brand" style={{ all: 'unset', cursor: 'pointer' }}>
+      <Link href="/" style={{ all: 'unset', cursor: 'pointer' }}>
         <span className="brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="logo">C</span>
           <b>ConsumerMind</b>
         </span>
       </Link>
-      {links.map((l) => (
-        <Link key={l.href} href={l.href} className={path === l.href ? 'active' : ''}>
-          {l.label}
-        </Link>
-      ))}
+      <Link href="/strategy">Strategy</Link>
+      <Link href="/copy-studio">Copy Studio</Link>
       <span className="spacer" />
-      <span className="plan">Workspace Demo · plan free</span>
+      {session?.user ? (
+        <>
+          <span className="plan">{session.user.email} · {session.user.role}</span>
+          <form
+            action={async () => {
+              'use server';
+              await signOut({ redirectTo: '/login' });
+            }}
+          >
+            <button className="btn ghost sm" type="submit">Salir</button>
+          </form>
+        </>
+      ) : (
+        <Link href="/login" className="active">Entrar</Link>
+      )}
     </nav>
   );
 }

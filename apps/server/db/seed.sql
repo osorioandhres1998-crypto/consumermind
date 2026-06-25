@@ -1,9 +1,9 @@
--- SEED DE DEMO — ConsumerMind
+-- SEED DE DEMO — ConsumerMind (OPCIONAL / LEGADO)
 -- ------------------------------------------------------------
--- Crea un workspace y un usuario con UUIDs FIJOS para que la demo
--- (sin auth real todavía) pueda mandar x-workspace-id / x-user-id
--- y que las FK + RLS funcionen. Estos UUIDs están replicados en
--- apps/web/lib/tenant.js. Cuando se conecte NextAuth, esto se retira.
+-- Ya hay auth real (NextAuth): los usuarios se crean en /register, que
+-- genera workspace + Owner con contraseña. Este seed solo deja un
+-- workspace/usuario de ejemplo (sin contraseña, no sirve para login).
+-- Puedes ignorarlo o borrarlo; se mantiene por compatibilidad.
 
 INSERT INTO workspaces (id, name, plan)
 VALUES ('00000000-0000-0000-0000-000000000001', 'Workspace Demo', 'free')

@@ -1,17 +1,11 @@
-// Cliente HTTP hacia el backend de ConsumerMind.
-// Inyecta las cabeceras de tenant (mientras no hay auth real) y normaliza
-// el manejo de errores. Nunca llama a api.anthropic.com directo (CLAUDE.md).
-import { DEMO_WORKSPACE_ID, DEMO_USER_ID } from './tenant';
+// Cliente HTTP del navegador. Llama a /api/... (mismo origen). El proxy
+// server-side de Next adjunta el JWT del backend (ver app/api/[...path]/route.js);
+// el navegador nunca ve el token ni la API key de Claude.
 
 export async function apiFetch(path, options = {}) {
   const res = await fetch(path, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-workspace-id': DEMO_WORKSPACE_ID,
-      'x-user-id': DEMO_USER_ID,
-      ...(options.headers || {}),
-    },
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
 
   if (!res.ok) {

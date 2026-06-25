@@ -18,14 +18,28 @@
  */
 
 const pool = require('../../db/pool');
+const { verifyToken } = require('../../modules/auth/service');
 
 async function requireWorkspace(req, res, next) {
-  // En producción: extraer de req.user (JWT verificado por tu auth).
-  const workspaceId = req.user?.workspaceId || req.header('x-workspace-id');
-  const userId = req.user?.id || req.header('x-user-id');
+  // Auth real: el tenant se deriva de un JWT firmado por el backend (emitido en
+  // /api/auth/login). Ya NO se confía en cabeceras x-workspace-id del cliente.
+  const authHeader = req.header('authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
+    return res.status(401).json({ error: 'No autenticado.' });
+  }
 
+  let claims;
+  try {
+    claims = verifyToken(token);
+  } catch (e) {
+    return res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+
+  const workspaceId = claims.workspaceId;
+  const userId = claims.sub;
   if (!workspaceId) {
-    return res.status(401).json({ error: 'Workspace no identificado.' });
+    return res.status(401).json({ error: 'Workspace no identificado en el token.' });
   }
 
   let client;
