@@ -4,6 +4,7 @@
  * Única capa que conoce la GROQ_API_KEY y las credenciales de
  * la base de datos (regla inviolable de CLAUDE.md). El frontend solo
  * habla con /api/...; jamás con el proveedor de IA directo.
+ * Motor: Groq (modelos open-source).
  */
 
 require('dotenv').config();
