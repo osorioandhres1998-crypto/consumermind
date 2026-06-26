@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,8 +19,13 @@ export default function LoginPage() {
     setError('');
     const r = await signIn('credentials', { email, password, redirect: false });
     setLoading(false);
-    if (r?.error) setError('Credenciales inválidas.');
-    else router.push('/strategy');
+    if (r?.error) {
+      setError('Credenciales inválidas. Verifica tu email y contraseña.');
+    } else if (r?.ok) {
+      router.push('/strategy');
+    } else {
+      setError('Error al iniciar sesión. Intenta de nuevo.');
+    }
   };
 
   return (
@@ -32,7 +38,21 @@ export default function LoginPage() {
         </div>
         <div className="field">
           <label>Contraseña</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: '100%', paddingRight: 40 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16 }}
+            >
+              {showPassword ? '🙈' : '👁'}
+            </button>
+          </div>
         </div>
         {error && <div className="banner err" style={{ marginBottom: 12 }}>⚠️ {error}</div>}
         <button className="btn" type="submit" disabled={loading || !email || !password}>
