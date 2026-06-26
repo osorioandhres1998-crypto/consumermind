@@ -3,10 +3,13 @@
  * ------------------------------------------------------------
  * Ejecuta schema.sql y seed.sql contra DATABASE_URL usando el
  * cliente `pg` (no requiere tener `psql` instalado).
+ * En desarrollo, cargar .env; en producción (Railway), las variables están inyectadas.
  *
  *   npm run db:migrate --workspace=apps/server
  */
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
