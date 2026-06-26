@@ -1,9 +1,9 @@
 /**
  * SERVIDOR EXPRESS — ConsumerMind (backend)
  * ------------------------------------------------------------
- * Única capa que conoce la ANTHROPIC_API_KEY y las credenciales de
+ * Única capa que conoce la GROQ_API_KEY y las credenciales de
  * la base de datos (regla inviolable de CLAUDE.md). El frontend solo
- * habla con /api/...; jamás con api.anthropic.com directo.
+ * habla con /api/...; jamás con el proveedor de IA directo.
  */
 
 require('dotenv').config();
