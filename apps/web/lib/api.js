@@ -9,10 +9,12 @@ export async function apiFetch(path, options = {}) {
   });
 
   if (!res.ok) {
-    let msg = 'Error en la solicitud.';
+    let msg = `Error en la solicitud (${res.status}).`;
     try {
       const j = await res.json();
-      msg = j.error || msg;
+      // Node usa { error }, FastAPI (Validator) usa { detail }.
+      msg = j.error || j.detail || msg;
+      if (typeof msg !== 'string') msg = JSON.stringify(msg);
     } catch (_) { /* respuesta sin JSON */ }
     throw new Error(msg);
   }
