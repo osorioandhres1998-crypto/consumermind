@@ -21,17 +21,18 @@ const { runAnalysis } = require('../../engine');
  * @param {string} args.userId       autor del análisis
  * @param {object} args.input        { product, customer, price, channel }
  */
-async function analyzeAndStore({ db, workspaceId, userId, input }) {
+async function analyzeAndStore({ db, workspaceId, userId, input, projectId = null }) {
   const { data, usage } = await runAnalysis('bias_analysis', input);
 
   const { rows } = await db.query(
     `INSERT INTO analyses
-       (workspace_id, created_by, module, input, result, tokens_in, tokens_cached)
-     VALUES ($1, $2, 'strategy', $3, $4, $5, $6)
+       (workspace_id, created_by, project_id, module, input, result, tokens_in, tokens_cached)
+     VALUES ($1, $2, $3, 'strategy', $4, $5, $6, $7)
      RETURNING id, created_at`,
     [
       workspaceId,
       userId,
+      projectId,
       JSON.stringify(input),
       JSON.stringify(data),
       usage?.input_tokens ?? null,

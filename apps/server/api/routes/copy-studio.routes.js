@@ -14,10 +14,10 @@ const copyStudio = require('../../modules/copy-studio/service');
 
 router.post('/generate', async (req, res) => {
   try {
-    const { analysisId, mode } = req.body;
+    const { analysisId, projectId, mode } = req.body;
 
-    if (!analysisId) {
-      return res.status(400).json({ error: 'Se requiere "analysisId".' });
+    if (!analysisId && !projectId) {
+      return res.status(400).json({ error: 'Se requiere "analysisId" o "projectId".' });
     }
     if (mode && !['copy', 'angles'].includes(mode)) {
       return res.status(400).json({ error: 'mode debe ser "copy" o "angles".' });
@@ -28,6 +28,7 @@ router.post('/generate', async (req, res) => {
       workspaceId: req.workspaceId,
       userId: req.userId,
       analysisId,
+      projectId: projectId || null,
       mode: mode || 'copy',
     });
 

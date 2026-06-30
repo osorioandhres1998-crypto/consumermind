@@ -27,6 +27,18 @@ async function loadSource({ db, workspaceId, analysisId }) {
   return rows[0] || null;
 }
 
+/** Carga el análisis de Strategy más reciente de un proyecto (flujo por proyecto). */
+async function loadLatestStrategyForProject({ db, workspaceId, projectId }) {
+  const { rows } = await db.query(
+    `SELECT id, input, result FROM analyses
+      WHERE workspace_id = $1 AND project_id = $2 AND module = 'strategy'
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [workspaceId, projectId]
+  );
+  return rows[0] || null;
+}
+
 /**
  * Genera copy/ángulos a partir de un análisis y lo guarda.
  * @param {object} args
@@ -36,11 +48,18 @@ async function loadSource({ db, workspaceId, analysisId }) {
  * @param {string} args.analysisId   id del análisis de Strategy a reutilizar
  * @param {'copy'|'angles'} args.mode
  */
-async function generateAndStore({ db, workspaceId, userId, analysisId, mode = 'copy' }) {
+async function generateAndStore({ db, workspaceId, userId, analysisId, projectId = null, mode = 'copy' }) {
   const taskKey = MODE_TO_TASK[mode];
   if (!taskKey) throw new Error(`Modo de Copy Studio desconocido: ${mode}`);
 
-  const source = await loadSource({ db, workspaceId, analysisId });
+  // Flujo por proyecto: si no se da analysisId pero sí projectId, usa el
+  // análisis de Strategy más reciente de ese proyecto.
+  let source = null;
+  if (analysisId) {
+    source = await loadSource({ db, workspaceId, analysisId });
+  } else if (projectId) {
+    source = await loadLatestStrategyForProject({ db, workspaceId, projectId });
+  }
   if (!source) {
     const err = new Error('Análisis de origen no encontrado.');
     err.code = 'SOURCE_NOT_FOUND';
@@ -55,13 +74,14 @@ async function generateAndStore({ db, workspaceId, userId, analysisId, mode = 'c
 
   const { rows } = await db.query(
     `INSERT INTO analyses
-       (workspace_id, created_by, module, input, result, tokens_in, tokens_cached)
-     VALUES ($1, $2, 'copy_studio', $3, $4, $5, $6)
+       (workspace_id, created_by, project_id, module, input, result, tokens_in, tokens_cached)
+     VALUES ($1, $2, $3, 'copy_studio', $4, $5, $6, $7)
      RETURNING id, created_at`,
     [
       workspaceId,
       userId,
-      JSON.stringify({ source_analysis_id: analysisId, mode, ...source.input }),
+      projectId,
+      JSON.stringify({ source_analysis_id: source.id, mode, ...source.input }),
       JSON.stringify(data),
       usage?.input_tokens ?? null,
       usage?.cache_read_input_tokens ?? null,

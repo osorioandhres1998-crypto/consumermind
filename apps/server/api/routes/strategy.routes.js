@@ -16,7 +16,7 @@ const strategy = require('../../modules/strategy/service');
 
 router.post('/analyze', async (req, res) => {
   try {
-    const { product, customer, price, channel } = req.body;
+    const { product, customer, price, channel, projectId } = req.body;
 
     if (!product || !customer) {
       return res.status(400).json({
@@ -29,6 +29,7 @@ router.post('/analyze', async (req, res) => {
       workspaceId: req.workspaceId,
       userId: req.userId,
       input: { product, customer, price, channel },
+      projectId: projectId || null,
     });
 
     res.json(result);
