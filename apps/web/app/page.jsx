@@ -1,35 +1,55 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { auth } from '../auth';
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  if (session?.user) redirect('/dashboard');
+
   return (
     <div>
       <div className="page-head">
-        <h1>ConsumerMind</h1>
-        <p>Un único motor psicológico alimenta todos los módulos. La psicología se produce una vez y viaja entre Strategy y Copy Studio.</p>
+        <h1>Master Tool</h1>
+        <p>Plataforma de validación y estrategia de producto para equipos de marketing B2B.
+           Valida tu MVP, descubre los sesgos que mueven a tu cliente y genera el copy que convierte.</p>
       </div>
 
       <div className="grid cols-2">
-        <Link href="/strategy" className="card">
+        <div className="card">
           <span className="tag">Paso 1</span>
+          <h3 style={{ margin: '10px 0 4px' }}>🧪 MVP Validator</h3>
+          <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
+            Simula audiencias y predice la aceptación de tu producto con un motor Monte Carlo
+            antes de invertir.
+          </p>
+        </div>
+        <div className="card">
+          <span className="tag">Paso 2</span>
           <h3 style={{ margin: '10px 0 4px' }}>🎯 Strategy</h3>
           <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
-            Describe un producto y un cliente. El motor detecta y rankea los sesgos
-            cognitivos que más se activarán, con su intensidad y una táctica concreta.
+            Detecta y rankea los sesgos cognitivos que más activarán a tu cliente frente a tu producto.
           </p>
-        </Link>
-        <Link href="/copy-studio" className="card">
-          <span className="tag">Paso 2</span>
+        </div>
+        <div className="card">
+          <span className="tag">Paso 3</span>
           <h3 style={{ margin: '10px 0 4px' }}>✍️ Copy Studio</h3>
           <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
-            Toma un análisis de Strategy y genera copy o ángulos creativos que activan
-            exactamente esos sesgos. Sin recalcular la psicología.
+            Genera copy y ángulos creativos que explotan exactamente esos sesgos.
           </p>
-        </Link>
+        </div>
+        <div className="card" style={{ opacity: 0.7 }}>
+          <span className="tag amber">Próximamente</span>
+          <h3 style={{ margin: '10px 0 4px' }}>📊 Landing Analyzer · Rentabilidad</h3>
+          <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
+            Evalúa landings contra estándares que convierten y calcula la rentabilidad de campañas pagadas.
+          </p>
+        </div>
       </div>
 
-      <div className="banner" style={{ marginTop: 22 }}>
-        🧠 La inferencia corre en el backend (Claude API). La <code>ANTHROPIC_API_KEY</code> vive
-        solo en el servidor; el navegador habla únicamente con <code>/api/...</code>.
+      <div style={{ marginTop: 24, textAlign: 'center' }}>
+        <Link href="/register" className="btn">Crear cuenta</Link>
+        <span style={{ margin: '0 10px', color: 'var(--muted)' }}>o</span>
+        <Link href="/login" className="btn ghost">Entrar</Link>
       </div>
     </div>
   );

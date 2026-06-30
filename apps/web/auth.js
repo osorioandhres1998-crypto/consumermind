@@ -57,10 +57,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
-    // Protege /strategy y /copy-studio vía middleware.
+    // Protege las rutas de la app (dashboard, proyectos y módulos) vía middleware.
     authorized: ({ auth, request }) => {
       const p = request.nextUrl.pathname;
-      const isProtected = p.startsWith('/strategy') || p.startsWith('/copy-studio');
+      const isProtected =
+        p.startsWith('/dashboard') ||
+        p.startsWith('/projects') ||
+        p.startsWith('/strategy') ||
+        p.startsWith('/copy-studio');
       if (isProtected) return !!auth;
       return true;
     },

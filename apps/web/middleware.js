@@ -2,5 +2,10 @@
 export { auth as middleware } from './auth';
 
 export const config = {
-  matcher: ['/strategy/:path*', '/copy-studio/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/projects/:path*',
+    '/strategy/:path*',
+    '/copy-studio/:path*',
+  ],
 };

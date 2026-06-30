@@ -6,14 +6,18 @@ export default async function Nav() {
 
   return (
     <nav className="nav">
-      <Link href="/" style={{ all: 'unset', cursor: 'pointer' }}>
+      <Link href={session?.user ? '/dashboard' : '/'} style={{ all: 'unset', cursor: 'pointer' }}>
         <span className="brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="logo">C</span>
-          <b>ConsumerMind</b>
+          <span className="logo">M</span>
+          <b>Master Tool</b>
         </span>
       </Link>
-      <Link href="/strategy">Strategy</Link>
-      <Link href="/copy-studio">Copy Studio</Link>
+      {session?.user && (
+        <>
+          <Link href="/dashboard">Proyectos</Link>
+          <Link href="/strategy">Análisis rápido</Link>
+        </>
+      )}
       <span className="spacer" />
       {session?.user ? (
         <>
