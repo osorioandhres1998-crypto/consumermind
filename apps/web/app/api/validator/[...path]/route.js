@@ -25,14 +25,27 @@ async function proxy(req, { params }) {
   const method = req.method;
   const body = ['GET', 'HEAD'].includes(method) ? undefined : await req.text();
 
-  const res = await fetch(`${VALIDATOR_URL}/${path}${search}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.backendToken}`,
-    },
-    body,
-  });
+  // Normaliza la base (sin barra final) para evitar dobles barras.
+  const base = VALIDATOR_URL.replace(/\/+$/, '');
+  const target = `${base}/${path}${search}`;
+
+  let res;
+  try {
+    res = await fetch(target, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.backendToken}`,
+      },
+      body,
+    });
+  } catch (e) {
+    // No se pudo contactar al Validator: devuelve el motivo en JSON.
+    return Response.json(
+      { error: `No se pudo contactar al Validator en ${base}: ${e.message}. ¿VALIDATOR_URL está bien configurada en Vercel?` },
+      { status: 502 }
+    );
+  }
 
   const text = await res.text();
   return new Response(text, {
