@@ -12,6 +12,10 @@ joblib==1.4.2
 #     heurística determinista si no hay ANTHROPIC_API_KEY. ---
 anthropic==0.39.0
 
+# --- Integración master-tool: validar JWT del backend Node + Postgres compartida ---
+PyJWT==2.9.0
+psycopg[binary]==3.2.3
+
 # --- Pruebas y calidad ---
 pytest==8.2.2
 pytest-cov==5.0.0

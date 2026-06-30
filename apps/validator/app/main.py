@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.integration import router as integration_router
 from app.api.routes import router
 
 app = FastAPI(
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(integration_router)
 
 
 @app.get("/", tags=["meta"])
