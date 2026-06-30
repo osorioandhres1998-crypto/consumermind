@@ -40,8 +40,51 @@ CREATE TABLE IF NOT EXISTS analyses (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- PROYECTO: unidad central del master-tool. Un proyecto describe un
+-- producto/servicio una sola vez; cada módulo (Strategy, Copy Studio,
+-- Validator, ...) cuelga sus resultados de él y reutiliza estos datos.
+CREATE TABLE IF NOT EXISTS projects (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+  name          TEXT NOT NULL,            -- "Lanzamiento App Fitness 2026"
+  product       TEXT,                     -- descripción del producto/servicio
+  customer      TEXT,                     -- perfil del público objetivo
+  price         TEXT,                     -- texto libre ("$20", "freemium"...)
+  channel       TEXT,                     -- web | app | redes | ...
+  landing_url   TEXT,                     -- opcional (para Landing Analyzer)
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_workspace ON projects (workspace_id, created_at DESC);
+
+-- analyses ahora cuelga de un proyecto (nullable para no romper datos previos
+-- ni el "análisis rápido sin proyecto").
+ALTER TABLE analyses ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE CASCADE;
+
 CREATE INDEX IF NOT EXISTS idx_analyses_workspace ON analyses (workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_analyses_module    ON analyses (workspace_id, module);
+CREATE INDEX IF NOT EXISTS idx_analyses_project    ON analyses (project_id);
+
+-- SIMULATIONS: resultados del microservicio Validator (FastAPI/Monte Carlo).
+-- Reemplaza el almacén in-memory (store.py) por persistencia multi-tenant.
+CREATE TABLE IF NOT EXISTS simulations (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id    UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id      UUID REFERENCES projects(id) ON DELETE CASCADE,
+  created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+  status          TEXT NOT NULL DEFAULT 'queued', -- queued | running | done | failed
+  config          JSONB,                          -- config de la simulación
+  results         JSONB,                          -- acceptance_rate, purchase_intent...
+  archetypes      JSONB,                          -- arquetipos generados (IA/heurístico)
+  insights        JSONB,                          -- objeciones, feature_importance...
+  audience_source TEXT,                           -- claude | heuristic
+  error           TEXT,                           -- mensaje si status=failed
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_simulations_workspace ON simulations (workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_simulations_project    ON simulations (project_id);
 
 -- Aislamiento a nivel de fila. La app fija el tenant por request con:
 --   BEGIN; SET LOCAL app.workspace_id = '<uuid>'; ...; COMMIT;
@@ -54,5 +97,22 @@ ALTER TABLE analyses FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation ON analyses;
 CREATE POLICY tenant_isolation ON analyses
+  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
+  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+
+-- Misma RLS para projects (mismo patrón SET LOCAL app.workspace_id).
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON projects;
+CREATE POLICY tenant_isolation ON projects
+  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
+  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+
+-- Misma RLS para simulations (las escribe el microservicio Validator,
+-- fijando app.workspace_id en su propia transacción por request).
+ALTER TABLE simulations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE simulations FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON simulations;
+CREATE POLICY tenant_isolation ON simulations
   USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
   WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
