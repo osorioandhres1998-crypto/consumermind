@@ -22,7 +22,7 @@ export default function LoginPage() {
     if (r?.error) {
       setError('Credenciales inválidas. Verifica tu email y contraseña.');
     } else if (r?.ok) {
-      router.push('/strategy');
+      router.push('/dashboard');
     } else {
       setError('Error al iniciar sesión. Intenta de nuevo.');
     }

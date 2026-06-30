@@ -8,6 +8,7 @@ import Link from 'next/link';
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: '', email: '', password: '', workspaceName: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -29,7 +30,7 @@ export default function RegisterPage() {
       // Cuenta creada → inicia sesión y entra.
       const r = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
       if (r?.error) throw new Error('Cuenta creada, pero falló el inicio de sesión.');
-      router.push('/strategy');
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -43,7 +44,24 @@ export default function RegisterPage() {
       <form className="card" onSubmit={submit}>
         <div className="field"><label>Nombre</label><input value={form.name} onChange={set('name')} autoFocus /></div>
         <div className="field"><label>Email</label><input type="email" value={form.email} onChange={set('email')} /></div>
-        <div className="field"><label>Contraseña (mín. 8)</label><input type="password" value={form.password} onChange={set('password')} /></div>
+        <div className="field">
+          <label>Contraseña (mín. 8)</label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={set('password')}
+              style={{ width: '100%', paddingRight: 40 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16 }}
+            >
+              {showPassword ? '🙈' : '👁'}
+            </button>
+          </div>
+        </div>
         <div className="field"><label>Nombre del workspace (opcional)</label><input value={form.workspaceName} onChange={set('workspaceName')} placeholder="Mi equipo" /></div>
         {error && <div className="banner err" style={{ marginBottom: 12 }}>⚠️ {error}</div>}
         <button className="btn" type="submit" disabled={loading || !form.email || form.password.length < 8}>
