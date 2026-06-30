@@ -13,6 +13,7 @@ const cors = require('cors');
 
 const { requireWorkspace } = require('./api/middleware/workspace');
 const authRoutes = require('./api/routes/auth.routes');
+const projectsRoutes = require('./api/routes/projects.routes');
 const strategyRoutes = require('./api/routes/strategy.routes');
 const copyStudioRoutes = require('./api/routes/copy-studio.routes');
 
@@ -33,6 +34,7 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'consumermind-api
 app.use('/api/auth', authRoutes);
 
 // Montaje de los módulos. requireWorkspace verifica el JWT y fija el tenant (RLS) por request.
+app.use('/api/projects', requireWorkspace, projectsRoutes);
 app.use('/api/strategy', requireWorkspace, strategyRoutes);
 app.use('/api/copy-studio', requireWorkspace, copyStudioRoutes);
 
