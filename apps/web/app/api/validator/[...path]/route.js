@@ -12,6 +12,7 @@
 
 import { auth } from '../../../../auth';
 
+// process.env.VALIDATOR_URL debe estar seteada en Vercel (Production) → apps/validator en Railway.
 const VALIDATOR_URL = process.env.VALIDATOR_URL || 'http://localhost:8000';
 
 async function proxy(req, { params }) {
