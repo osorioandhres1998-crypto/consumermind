@@ -30,8 +30,8 @@ function makeWriter(doc) {
   };
 }
 
-function header(w, subtitle) {
-  w.text('ConsumerMind', { size: 20, style: 'bold', color: [67, 56, 202] });
+function header(w, subtitle, brand = 'ConsumerMind') {
+  w.text(brand, { size: 20, style: 'bold', color: [67, 56, 202] });
   w.text(subtitle, { size: 12, color: [110, 110, 120], gap: 4 });
   w.text(`Generado el ${new Date().toLocaleString('es-ES')}`, { size: 9, color: [150, 150, 160] });
   w.rule();
@@ -104,4 +104,104 @@ export function exportCopyPDF(payload) {
   }
 
   doc.save(`copy-studio-${mode}.pdf`);
+}
+
+// --- Informe unificado del proyecto (master-tool) ---
+// Recibe el proyecto completo (getProject: datos + analyses + simulations)
+// y arma UN solo PDF con: datos del caso, validación de mercado (Validator),
+// sesgos (Strategy) y copy/ángulos (Copy Studio).
+const OBJECTION_ES = {
+  precio_alto: 'Precio alto',
+  valor_percibido_bajo: 'Valor percibido bajo',
+  no_lo_necesita: 'No lo necesita',
+};
+const pct = (v) => `${((v ?? 0) * 100).toFixed(1)}%`;
+
+export function exportProjectReportPDF(project) {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const w = makeWriter(doc);
+
+  header(w, `Informe completo — ${project.name}`, 'Master Tool');
+
+  // 1) Datos del proyecto
+  w.text('1. Datos del proyecto', { size: 14, style: 'bold', gap: 4 });
+  w.text(`Producto: ${project.product || '—'}`, { size: 10, color: [80, 80, 90] });
+  w.text(`Público objetivo: ${project.customer || '—'}`, { size: 10, color: [80, 80, 90] });
+  if (project.price) w.text(`Precio: ${project.price}`, { size: 10, color: [80, 80, 90] });
+  if (project.channel) w.text(`Canal: ${project.channel}`, { size: 10, color: [80, 80, 90] });
+  if (project.landing_url) w.text(`Landing: ${project.landing_url}`, { size: 10, color: [80, 80, 90] });
+  w.rule();
+
+  // 2) Validación de mercado (simulación más reciente)
+  const sim = (project.simulations || [])[0];
+  w.text('2. Validación de mercado (MVP Validator)', { size: 14, style: 'bold', gap: 4 });
+  if (sim?.results) {
+    const r = sim.results;
+    const acc = r.acceptance_rate || {};
+    const buy = r.purchase_intent_probability || {};
+    w.text(`Aceptación de mercado: ${pct(acc.mean)}  (IC 95%: ${pct(acc.ci_95_lower)} – ${pct(acc.ci_95_upper)})`, { size: 11, style: 'bold' });
+    w.text(`Intención de compra: ${pct(buy.mean)}  (IC 95%: ${pct(buy.ci_95_lower)} – ${pct(buy.ci_95_upper)})`, { size: 11, style: 'bold', gap: 4 });
+    if ((r.top_objections || []).length) {
+      w.text('Principales objeciones:', { size: 11, style: 'bold' });
+      r.top_objections.forEach((o) =>
+        w.text(`• ${OBJECTION_ES[o.objection] || o.objection}: ${pct(o.frequency)}`, { size: 10, color: [60, 60, 70] }));
+    }
+    if ((r.feature_importance || []).length) {
+      w.text('Importancia de características:', { size: 11, style: 'bold' });
+      r.feature_importance.forEach((f) =>
+        w.text(`• ${f.feature}: ${pct(f.importance)}`, { size: 10, color: [60, 60, 70] }));
+    }
+    if (sim.insights?.summary) w.text(`Insight: ${sim.insights.summary}`, { size: 10, style: 'italic', color: [60, 60, 70] });
+    w.text(`Motor de audiencias: ${sim.audience_source === 'claude' ? 'IA (Claude)' : 'heurístico determinista'}`, { size: 9, color: [130, 130, 140] });
+  } else {
+    w.text('Sin simulación ejecutada aún.', { size: 10, style: 'italic', color: [130, 130, 140] });
+  }
+  w.rule();
+
+  // 3) Sesgos (análisis de Strategy más reciente)
+  const strat = (project.analyses || []).find((a) => a.module === 'strategy');
+  w.text('3. Psicología del cliente (Strategy)', { size: 14, style: 'bold', gap: 4 });
+  if (strat?.result) {
+    const r = strat.result;
+    w.text(`Probabilidad de conversión: ${r.conversion_probability || '—'}  ·  Decisión: ${r.decision_system || '—'}`, { size: 11, style: 'bold' });
+    if (r.summary) w.text(`Insight: ${r.summary}`, { size: 10, style: 'italic', color: [60, 60, 70], gap: 4 });
+    (r.biases || []).forEach((b) => {
+      w.text(`${b.rank}. ${b.name}  ·  ${b.intensity}/100`, { size: 11, style: 'bold', color: [40, 40, 60] });
+      w.text(`Por qué: ${b.why}`, { size: 10, color: [60, 60, 70] });
+      w.text(`Acción: ${b.action}`, { size: 10, gap: 6 });
+    });
+    if (r.main_friction) w.text(`Fricción principal: ${r.main_friction}`, { size: 10 });
+    if (r.recommended_trigger) w.text(`Disparador recomendado: ${r.recommended_trigger}`, { size: 10 });
+  } else {
+    w.text('Sin análisis de sesgos aún.', { size: 10, style: 'italic', color: [130, 130, 140] });
+  }
+  w.rule();
+
+  // 4) Copy (generaciones de Copy Studio, la más reciente por modo)
+  const copies = (project.analyses || []).filter((a) => a.module === 'copy_studio');
+  w.text('4. Copy y ángulos (Copy Studio)', { size: 14, style: 'bold', gap: 4 });
+  if (copies.length === 0) {
+    w.text('Sin copy generado aún.', { size: 10, style: 'italic', color: [130, 130, 140] });
+  }
+  copies.forEach((c) => {
+    const r = c.result || {};
+    if (r.angles) {
+      w.text('Ángulos creativos', { size: 12, style: 'bold', gap: 2 });
+      r.angles.forEach((a, i) => {
+        w.text(`${i + 1}. ${a.title}  [${a.bias}]`, { size: 10, style: 'bold' });
+        w.text(`${a.big_idea} — ${a.execution}`, { size: 10, color: [60, 60, 70] });
+        w.text(`Gancho: ${a.hook}`, { size: 10, style: 'italic', color: [110, 110, 120], gap: 4 });
+      });
+    } else {
+      w.text('Copy', { size: 12, style: 'bold', gap: 2 });
+      (r.headlines || []).forEach((h) => w.text(`• ${h.text}  [${h.bias}]`, { size: 10 }));
+      (r.cta || []).forEach((c2) => w.text(`CTA: ${c2.text}  [${c2.bias}]`, { size: 10 }));
+      if (r.body) w.text(r.body, { size: 10, color: [60, 60, 70] });
+      (r.subject_lines || []).forEach((s) => w.text(`Asunto: ${s}`, { size: 10, color: [60, 60, 70] }));
+    }
+    w.text('', { gap: 4 });
+  });
+
+  const safe = (project.name || 'proyecto').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+  doc.save(`informe-${safe}.pdf`);
 }
