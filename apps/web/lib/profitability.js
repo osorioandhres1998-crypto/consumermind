@@ -26,12 +26,18 @@ export const CURRENCIES = {
   BRL: { symbol: 'R$', locale: 'pt-BR', decimals: 2 },
 };
 
-// BENCHMARKS documentados (spec §11 — no son números mágicos):
+// BENCHMARKS documentados (spec §11 y módulo LTV/MER — no son números mágicos):
 // - Margen de contribución sano en e-commerce: > 30%.
 // - CVR típico e-commerce: 1,5–3%.
+// - Ratio LTV/CAC: <1 destruye valor · 1–3 riesgo · 3–5 saludable · >5 posible subinversión.
+// - Payback: <6 meses excelente · 6–12 saludable · 12–18 zona neutra (sin recomendación) · >18 capital paciente.
+// - MER (banda de industria, referencial): <3 riesgo · 3–5 saludable · >5 espacio para escalar.
 export const BENCHMARKS = {
   MARGEN_MINIMO: 0.30,
   CVR_BAJO: 0.015,
+  LTV_CAC_MALO: 1, LTV_CAC_SANO: 3, LTV_CAC_ALTO: 5,
+  PAYBACK_EXCELENTE: 6, PAYBACK_SANO: 12, PAYBACK_LARGO: 18,
+  MER_RIESGO: 3, MER_ALTO: 5,
 };
 
 /** Parsea un input de usuario a número (acepta coma decimal). */
@@ -63,11 +69,59 @@ export function computeCore(i) {
     : (i.ads > 0 ? i.ingresos / i.ads : Infinity);
   const cpaActual = i.ordenes > 0 ? i.ads / i.ordenes : null;
 
+  // ---- Módulo LTV + CAC real + MER ----
+  // LTV reusa margenPct (decisión confirmada: no se pide margen bruto separado).
+  // Con frecuencia=1 y retención=1, ltv === margenAbs (=CAC máximo): defaults neutros.
+  const frecuenciaMensual = i.frecuenciaMensual || 1;
+  const retencionMeses = i.retencionMeses || 1;
+  const ltvBruto = i.precio * frecuenciaMensual * retencionMeses;
+  const ltv = ltvBruto * margenPct;
+
+  // CAC real (blended): incluye fijos de marketing, no solo la pauta.
+  // Si no se declara clientesNuevos, usa las órdenes del periodo como fallback.
+  const clientesNuevos = i.clientesNuevos > 0 ? i.clientesNuevos : i.ordenes;
+  const cacReal = clientesNuevos > 0 ? (i.ads + i.fijos) / clientesNuevos : Infinity;
+
+  const ratioLtvCac = cacReal > 0 && isFinite(cacReal) ? ltv / cacReal : Infinity;
+  const margenMensualCliente = i.precio * frecuenciaMensual * margenPct;
+  const paybackMeses = margenMensualCliente > 0 ? cacReal / margenMensualCliente : Infinity;
+
+  // MER real: ingresos sobre TODO el gasto de marketing (ads + fijos).
+  // Distinto del ROAS actual (ingresos / ads). No dispara el semáforo principal.
+  const mer = (i.ads + i.fijos) > 0 ? i.ingresos / (i.ads + i.fijos) : Infinity;
+
   return {
     comisionUnit, perdidaDevol, costoVarOrden, margenAbs, margenPct, margenInvalido,
     cacMaximo, roasBreakEven, roasObjetivo, ventasNec, ordenesNec, cpaObjetivo,
     roasActual, cpaActual,
+    ltv, ltvBruto, cacReal, ratioLtvCac, paybackMeses, mer, clientesNuevos,
   };
+}
+
+/** Banda del ratio LTV/CAC → tono visual. */
+export function ltvCacBand(r) {
+  if (!isFinite(r)) return { tone: 'info', label: '—' };
+  if (r < BENCHMARKS.LTV_CAC_MALO) return { tone: 'bad', label: 'destruye valor' };
+  if (r < BENCHMARKS.LTV_CAC_SANO) return { tone: 'warn', label: 'riesgo' };
+  if (r <= BENCHMARKS.LTV_CAC_ALTO) return { tone: 'ok', label: 'saludable' };
+  return { tone: 'info', label: 'posible subinversión' };
+}
+
+/** Banda del payback en meses → tono visual. */
+export function paybackBand(p) {
+  if (!isFinite(p)) return { tone: 'info', label: '—' };
+  if (p < BENCHMARKS.PAYBACK_EXCELENTE) return { tone: 'ok', label: 'excelente' };
+  if (p <= BENCHMARKS.PAYBACK_SANO) return { tone: 'ok', label: 'saludable' };
+  if (p <= BENCHMARKS.PAYBACK_LARGO) return { tone: 'info', label: 'zona neutra' };
+  return { tone: 'warn', label: 'capital paciente' };
+}
+
+/** Banda del MER → tono visual (referencial, no toca el semáforo). */
+export function merBand(m) {
+  if (!isFinite(m)) return { tone: 'info', label: '—' };
+  if (m < BENCHMARKS.MER_RIESGO) return { tone: 'warn', label: 'zona de riesgo' };
+  if (m <= BENCHMARKS.MER_ALTO) return { tone: 'ok', label: 'saludable' };
+  return { tone: 'ok', label: 'espacio para escalar' };
 }
 
 /** Semáforo (spec §11): 'invalid' | 'bad' | 'warn' | 'ok'. */
@@ -166,6 +220,55 @@ export function recommend(m, fm) {
     recos.push({
       tone: 'ok', title: 'Rentable: tienes espacio para escalar',
       body: `Tu ROAS (${fm.r2(m.roasActual)}) supera el objetivo (${fm.r2(m.roasObjetivo)}). Puedes subir presupuesto con cuidado manteniendo el CPA.`,
+    });
+  }
+
+  // ---- Módulo LTV / CAC real / MER ----
+  if (isFinite(m.ratioLtvCac)) {
+    if (m.ratioLtvCac < BENCHMARKS.LTV_CAC_MALO) {
+      recos.push({
+        tone: 'bad', title: 'Tu LTV/CAC destruye valor',
+        body: `Cada cliente te deja ${fm.money(m.ltv)} en su vida útil pero te cuesta ${fm.money(m.cacReal)} adquirirlo (ratio ${m.ratioLtvCac.toFixed(2).replace('.', ',')}). Pierdes dinero por cliente: sube retención/frecuencia o baja tu CAC.`,
+      });
+    } else if (m.ratioLtvCac < BENCHMARKS.LTV_CAC_SANO) {
+      recos.push({
+        tone: 'warn', title: 'Ratio LTV/CAC en zona de riesgo',
+        body: `Tu ratio LTV/CAC es ${m.ratioLtvCac.toFixed(2).replace('.', ',')} (sano: 3–5). El cliente paga su adquisición pero deja poco excedente para crecer.`,
+      });
+    } else if (m.ratioLtvCac > BENCHMARKS.LTV_CAC_ALTO) {
+      recos.push({
+        tone: 'info', title: 'Posible subinversión en adquisición',
+        body: `Tu ratio LTV/CAC es ${m.ratioLtvCac.toFixed(2).replace('.', ',')} (>5). Podrías estar invirtiendo menos de lo que tu economía permite: hay espacio para adquirir más agresivamente.`,
+      });
+    }
+  }
+
+  if (isFinite(m.paybackMeses)) {
+    if (m.paybackMeses > BENCHMARKS.PAYBACK_LARGO) {
+      recos.push({
+        tone: 'warn', title: 'Payback largo: exige capital paciente',
+        body: `Recuperas el costo de adquirir un cliente en ${m.paybackMeses.toFixed(1).replace('.', ',')} meses (>18). Necesitas caja para sostener ese ciclo; evalúa acelerar la recompra o reducir el CAC.`,
+      });
+    } else if (m.paybackMeses < BENCHMARKS.PAYBACK_EXCELENTE) {
+      recos.push({
+        tone: 'ok', title: 'Payback excelente',
+        body: `Recuperas la inversión por cliente en ${m.paybackMeses.toFixed(1).replace('.', ',')} meses (<6). Tu ciclo de caja soporta escalar adquisición.`,
+      });
+    }
+    // 12–18 meses: zona neutra sin recomendación (umbral no definido por el curso).
+  }
+
+  if (m.cpaActual != null && isFinite(m.cacReal) && m.cpaActual < m.cacReal) {
+    recos.push({
+      tone: 'warn', title: 'CPA de plataforma ≠ CAC real',
+      body: `Tu CPA de plataforma (${fm.money(m.cpaActual)}) se ve bien, pero tu CAC real —sumando equipo y herramientas— es ${fm.money(m.cacReal)}. No confundas los dos números frente a finanzas.`,
+    });
+  }
+
+  if (isFinite(m.mer) && m.mer < BENCHMARKS.MER_RIESGO) {
+    recos.push({
+      tone: 'warn', title: 'MER en zona de riesgo',
+      body: `Tus ingresos son solo ${m.mer.toFixed(2).replace('.', ',')}× todo tu gasto de marketing (ads + fijos). La banda sana de la industria es 3–5.`,
     });
   }
 

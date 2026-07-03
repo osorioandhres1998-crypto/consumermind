@@ -13,6 +13,7 @@ import { getProject } from '../../../../lib/api';
 import {
   CURRENCIES, parseNum, computeCore, diagnose,
   scenarioBudget, scenarioPrice, scenarioCvr, recommend,
+  ltvCacBand, paybackBand, merBand,
 } from '../../../../lib/profitability';
 
 const TONES = {
@@ -101,6 +102,8 @@ export default function ProfitabilityPage() {
     precio: '100000', costoProducto: '40000', costoEnvio: '8000', comision: '3', devolucion: '5',
     adsPeriodo: '2000000', fijosMarketing: '1700000', cpc: '800',
     ingresosPeriodo: '5000000', ordenesPeriodo: '50', roasManual: '2.50',
+    // Módulo LTV: defaults neutros (1 y 1 → ltv = CAC máximo; vacío → usa órdenes).
+    frecuenciaMensual: '1', retencionMeses: '1', clientesNuevosPeriodo: '',
   });
   const [roasMode, setRoasMode] = useState('auto');
   const [tab, setTab] = useState('budget');
@@ -149,6 +152,8 @@ export default function ProfitabilityPage() {
     ads: parseNum(inp.adsPeriodo), fijos: parseNum(inp.fijosMarketing), cpc: parseNum(inp.cpc),
     ingresos: parseNum(inp.ingresosPeriodo), ordenes: parseNum(inp.ordenesPeriodo),
     roasMode, roasManual: parseNum(inp.roasManual),
+    frecuenciaMensual: parseNum(inp.frecuenciaMensual), retencionMeses: parseNum(inp.retencionMeses),
+    clientesNuevos: parseNum(inp.clientesNuevosPeriodo),
   }), [inp, roasMode]);
   const m = useMemo(() => computeCore(i), [i]);
   const status = diagnose(m);
@@ -242,6 +247,29 @@ export default function ProfitabilityPage() {
           )}
           <label style={lbl}><span>Ingresos del periodo</span><span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: 'var(--muted)', fontSize: 12 }}>{cur.symbol}</span><input style={fld} value={inp.ingresosPeriodo} onChange={set('ingresosPeriodo')} inputMode="numeric" /></span></label>
           <label style={lbl}><span>Nº de órdenes</span><input style={fld} value={inp.ordenesPeriodo} onChange={set('ordenesPeriodo')} inputMode="numeric" /></label>
+          <label style={lbl}>
+            <span>Clientes nuevos <span style={{ fontSize: 10, color: 'var(--muted)' }}>(vacío = usa órdenes)</span></span>
+            <input
+              style={fld} value={inp.clientesNuevosPeriodo} inputMode="numeric" placeholder="—"
+              onChange={(e) => {
+                // Un cliente nuevo aporta mínimo 1 orden: se clampa aquí, no en el cálculo.
+                const v = e.target.value;
+                const n = parseNum(v);
+                const ord = parseNum(inp.ordenesPeriodo);
+                setInp({ ...inp, clientesNuevosPeriodo: v !== '' && ord > 0 && n > ord ? String(ord) : v });
+              }}
+            />
+          </label>
+        </section>
+
+        <section style={card}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>Cliente / LTV</div>
+          <p style={{ margin: '0 0 7px', fontSize: 11, color: 'var(--muted)' }}>Estimación declarada por ti — no son datos de cohortes reales</p>
+          <label style={lbl}><span>Compras por cliente al mes</span><input style={{ ...fld, width: 66 }} value={inp.frecuenciaMensual} onChange={set('frecuenciaMensual')} inputMode="decimal" /></label>
+          <label style={lbl}><span>Meses que permanece (retención)</span><input style={{ ...fld, width: 66 }} value={inp.retencionMeses} onChange={set('retencionMeses')} inputMode="decimal" /></label>
+          <p style={{ margin: '6px 0 0', fontSize: 10.5, color: 'var(--muted)', lineHeight: 1.5 }}>
+            Ej.: si compra cada 2 meses, frecuencia = 0,5. Con 1 y 1 el LTV equivale al margen de una sola orden.
+          </p>
         </section>
       </div>
 
@@ -292,19 +320,8 @@ export default function ProfitabilityPage() {
         </div>
       </div>
 
-      {/* Métricas clave */}
-      <div style={{ ...secTitle, fontSize: 10.5 }}>Métricas clave</div>
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 11, marginBottom: 14 }}>
-        <Metric label="Margen" value={m.margenInvalido ? '—' : fm.pct(m.margenPct, 2)} sub={`${fm.money(m.margenAbs)}/orden`} color="#22a06b" />
-        <Metric label="CAC máximo" value={fm.money(m.cacMaximo)} sub="máx por cliente" />
-        <Metric label="ROAS break-even" value={fm.r2n(m.roasBreakEven)} sub="cubre costo variable" />
-        <Metric label="ROAS objetivo" value={fm.r2n(m.roasObjetivo)} sub="cubre ads + estructura" color="#e0941f" />
-        <Metric label="Ventas necesarias" value={fm.money(m.ventasNec)} sub={`${fm.i0(m.ordenesNec)} órdenes/mes`} />
-        <Metric label="CPA objetivo" value={fm.money(m.cpaObjetivo)} sub="costo máx adquisición" />
-      </div>
-
-      {/* ROAS / CPA actual */}
-      <div className="grid cols-2" style={{ marginBottom: 28 }}>
+      {/* ROAS / CPA actual — justo debajo del diagnóstico, antes de las métricas */}
+      <div className="grid cols-2" style={{ marginBottom: 16 }}>
         <div style={{ background: '#fffaf0', border: '1px solid #f3e2c2', borderRadius: 12, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#e0941f' }}>{fm.r2(m.roasActual)}</div>
           <div><div style={{ fontSize: 13, fontWeight: 700 }}>ROAS actual</div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Ingresos / Gasto en ads</div></div>
@@ -320,6 +337,42 @@ export default function ProfitabilityPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Métricas clave */}
+      <div style={{ ...secTitle, fontSize: 10.5 }}>Métricas clave</div>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 11, marginBottom: 14 }}>
+        <Metric label="Margen" value={m.margenInvalido ? '—' : fm.pct(m.margenPct, 2)} sub={`${fm.money(m.margenAbs)}/orden`} color="#22a06b" />
+        <Metric label="CAC máximo" value={fm.money(m.cacMaximo)} sub="máx por cliente" />
+        <Metric label="ROAS break-even" value={fm.r2n(m.roasBreakEven)} sub="cubre costo variable" />
+        <Metric label="ROAS objetivo" value={fm.r2n(m.roasObjetivo)} sub="cubre ads + estructura" color="#e0941f" />
+        <Metric label="Ventas necesarias" value={fm.money(m.ventasNec)} sub={`${fm.i0(m.ordenesNec)} órdenes/mes`} />
+        <Metric label="CPA objetivo" value={fm.money(m.cpaObjetivo)} sub="costo máx adquisición" />
+      </div>
+
+      {/* Cliente y adquisición (LTV / CAC real / MER) */}
+      <div style={{ ...secTitle, fontSize: 10.5 }}>Cliente y adquisición</div>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 11, marginBottom: 28 }}>
+        <Metric label="LTV" value={fm.money(m.ltv)} sub={`valor de vida (${fm.money(m.ltvBruto)} bruto)`} color="#22a06b" />
+        <Metric label="CAC real (blended)" value={fm.money(m.cacReal)} sub="(ads + fijos) / clientes nuevos" />
+        <Metric
+          label="Ratio LTV/CAC"
+          value={isFinite(m.ratioLtvCac) ? m.ratioLtvCac.toFixed(2).replace('.', ',') : '∞'}
+          sub={ltvCacBand(m.ratioLtvCac).label}
+          color={TONES[ltvCacBand(m.ratioLtvCac).tone].color}
+        />
+        <Metric
+          label="Payback"
+          value={isFinite(m.paybackMeses) ? `${m.paybackMeses.toFixed(1).replace('.', ',')} meses` : '∞'}
+          sub={paybackBand(m.paybackMeses).label}
+          color={TONES[paybackBand(m.paybackMeses).tone].color}
+        />
+        <Metric
+          label="MER"
+          value={isFinite(m.mer) ? `${m.mer.toFixed(2).replace('.', ',')}×` : '∞'}
+          sub={`${merBand(m.mer).label} · ingresos / gasto total mkt`}
+          color={TONES[merBand(m.mer).tone].color}
+        />
       </div>
 
       {/* ===== 3. RECOMENDACIONES ===== */}
