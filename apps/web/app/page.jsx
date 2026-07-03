@@ -37,11 +37,18 @@ export default async function Home() {
             Genera copy y ángulos creativos que explotan exactamente esos sesgos.
           </p>
         </div>
+        <div className="card">
+          <span className="tag">Paso 4</span>
+          <h3 style={{ margin: '10px 0 4px' }}>💰 Calculadora de Rentabilidad</h3>
+          <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
+            Diagnostica si tu pauta gana o pierde dinero (ROAS, CAC, CPA) y simula cuánto puedes escalar.
+          </p>
+        </div>
         <div className="card" style={{ opacity: 0.7 }}>
           <span className="tag amber">Próximamente</span>
-          <h3 style={{ margin: '10px 0 4px' }}>📊 Landing Analyzer · Rentabilidad</h3>
+          <h3 style={{ margin: '10px 0 4px' }}>📊 Landing Analyzer</h3>
           <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
-            Evalúa landings contra estándares que convierten y calcula la rentabilidad de campañas pagadas.
+            Evalúa tu landing contra los estándares de las páginas que convierten.
           </p>
         </div>
       </div>

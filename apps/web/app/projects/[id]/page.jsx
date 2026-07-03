@@ -11,7 +11,7 @@ const MODULES = [
   { key: 'strategy',      icon: '🎯', name: 'Strategy',      desc: 'Detecta los sesgos cognitivos que activarán a tu cliente.',   kind: 'analysis', module: 'strategy' },
   { key: 'copy-studio',   icon: '✍️', name: 'Copy Studio',   desc: 'Genera copy y ángulos que explotan esos sesgos.',            kind: 'analysis', module: 'copy_studio' },
   { key: 'landing',       icon: '📊', name: 'Landing Analyzer', desc: 'Evalúa tu landing contra estándares que convierten.',       soon: true },
-  { key: 'profitability', icon: '💰', name: 'Calculadora de Rentabilidad', desc: 'Métricas de rentabilidad de campañas pagadas.',  soon: true },
+  { key: 'profitability', icon: '💰', name: 'Calculadora de Rentabilidad', desc: 'Diagnóstico de rentabilidad de tu pauta: ROAS, CAC y simulador de escalado.', kind: 'local' },
 ];
 
 export default function ProjectPage() {
@@ -79,9 +79,11 @@ export default function ProjectPage() {
                 <h3 style={{ margin: 0 }}>{m.icon} {m.name}</h3>
                 {m.soon
                   ? <span className="tag amber">🚧 En desarrollo</span>
-                  : done
-                    ? <span className="tag green">✓ Ejecutado</span>
-                    : <span className="tag gray">Sin ejecutar</span>}
+                  : m.kind === 'local'
+                    ? <span className="tag">⚡ Al instante</span>
+                    : done
+                      ? <span className="tag green">✓ Ejecutado</span>
+                      : <span className="tag gray">Sin ejecutar</span>}
               </div>
               <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>{m.desc}</p>
             </div>
