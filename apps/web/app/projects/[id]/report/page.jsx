@@ -31,10 +31,12 @@ export default function ProjectReportPage() {
   const sim = (project.simulations || [])[0];
   const strat = (project.analyses || []).find((a) => a.module === 'strategy');
   const copies = (project.analyses || []).filter((a) => a.module === 'copy_studio');
+  const landing = (project.analyses || []).find((a) => a.module === 'landing');
 
   const sections = [
     { icon: '🧪', name: 'MVP Validator', done: !!sim, detail: sim ? `Aceptación ${((sim.results?.acceptance_rate?.mean ?? 0) * 100).toFixed(1)}%` : 'Sin simulación' },
     { icon: '🎯', name: 'Strategy', done: !!strat, detail: strat ? `${(strat.result?.biases || []).length} sesgos detectados` : 'Sin análisis' },
+    { icon: '📊', name: 'Landing Analyzer', done: !!landing, detail: landing ? `Score ${landing.result?.score ?? '—'}/100 · ${landing.result?.ethics_alerts ?? 0} alertas` : 'Sin auditoría' },
     { icon: '✍️', name: 'Copy Studio', done: copies.length > 0, detail: copies.length ? `${copies.length} generación(es)` : 'Sin copy' },
   ];
   const anyDone = sections.some((s) => s.done);

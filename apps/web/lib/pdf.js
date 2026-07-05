@@ -177,9 +177,32 @@ export function exportProjectReportPDF(project) {
   }
   w.rule();
 
-  // 4) Copy (generaciones de Copy Studio, la más reciente por modo)
+  // 4) Landing Analyzer (auditoría más reciente)
+  const landing = (project.analyses || []).find((a) => a.module === 'landing');
+  w.text('4. Auditoría de landing (Landing Analyzer)', { size: 14, style: 'bold', gap: 4 });
+  if (landing?.result) {
+    const r = landing.result;
+    w.text(`Score de conversión: ${r.score}/100 — ${r.bandLabel || ''}`, { size: 11, style: 'bold' });
+    w.text(`Principios de persuasión activos: ${r.principles_active}/9 · Alertas éticas: ${r.ethics_alerts}`, { size: 10, color: [60, 60, 70], gap: 4 });
+    Object.values(r.dimensions || {}).forEach((d) => {
+      w.text(`• ${d.label}: ${d.score}/100 (${d.passed}/${d.total} checks)`, { size: 10, color: [60, 60, 70] });
+    });
+    const ethBad = (r.ethics || []).filter((e) => e.verdict !== 'ok');
+    if (ethBad.length) {
+      w.text('Semáforo ético — puntos a revisar:', { size: 11, style: 'bold' });
+      ethBad.forEach((e) => w.text(`• [${e.verdict === 'alerta' ? 'ALERTA' : 'Revisar'}] ${e.label}: ${e.detail}`, { size: 9.5, color: [120, 60, 50] }));
+    }
+    (r.recommendations || []).slice(0, 5).forEach((rec, i) => {
+      w.text(`${i + 1}. ${rec.missing}${rec.impact ? ` — ${rec.impact}` : ''}`, { size: 9.5, color: [60, 60, 70] });
+    });
+  } else {
+    w.text('Sin auditoría de landing aún.', { size: 10, style: 'italic', color: [130, 130, 140] });
+  }
+  w.rule();
+
+  // 5) Copy (generaciones de Copy Studio, la más reciente por modo)
   const copies = (project.analyses || []).filter((a) => a.module === 'copy_studio');
-  w.text('4. Copy y ángulos (Copy Studio)', { size: 14, style: 'bold', gap: 4 });
+  w.text('5. Copy y ángulos (Copy Studio)', { size: 14, style: 'bold', gap: 4 });
   if (copies.length === 0) {
     w.text('Sin copy generado aún.', { size: 10, style: 'italic', color: [130, 130, 140] });
   }

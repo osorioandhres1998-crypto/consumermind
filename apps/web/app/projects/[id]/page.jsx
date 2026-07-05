@@ -10,7 +10,7 @@ const MODULES = [
   { key: 'validator',     icon: '🧪', name: 'MVP Validator', desc: 'Predice la aceptación del mercado con simulación Monte Carlo.', kind: 'simulation' },
   { key: 'strategy',      icon: '🎯', name: 'Strategy',      desc: 'Detecta los sesgos cognitivos que activarán a tu cliente.',   kind: 'analysis', module: 'strategy' },
   { key: 'copy-studio',   icon: '✍️', name: 'Copy Studio',   desc: 'Genera copy y ángulos que explotan esos sesgos.',            kind: 'analysis', module: 'copy_studio' },
-  { key: 'landing',       icon: '📊', name: 'Landing Analyzer', desc: 'Evalúa tu landing contra estándares que convierten.',       soon: true },
+  { key: 'landing',       icon: '📊', name: 'Landing Analyzer', desc: 'Audita tu landing contra estándares que convierten + semáforo ético.', kind: 'analysis', module: 'landing' },
   { key: 'profitability', icon: '💰', name: 'Calculadora de Rentabilidad', desc: 'Diagnóstico de rentabilidad de tu pauta: ROAS, CAC y simulador de escalado.', kind: 'local' },
 ];
 

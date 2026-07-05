@@ -44,11 +44,11 @@ export default async function Home() {
             Diagnostica si tu pauta gana o pierde dinero (ROAS, CAC, CPA) y simula cuánto puedes escalar.
           </p>
         </div>
-        <div className="card" style={{ opacity: 0.7 }}>
-          <span className="tag amber">Próximamente</span>
+        <div className="card">
+          <span className="tag">Paso 5</span>
           <h3 style={{ margin: '10px 0 4px' }}>📊 Landing Analyzer</h3>
           <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
-            Evalúa tu landing contra los estándares de las páginas que convierten.
+            Audita tu landing contra los estándares que convierten, con semáforo ético de dark patterns.
           </p>
         </div>
       </div>
