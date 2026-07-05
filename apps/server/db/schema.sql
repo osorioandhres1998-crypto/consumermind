@@ -105,6 +105,29 @@ CREATE TABLE IF NOT EXISTS metrics_snapshots (
 CREATE INDEX IF NOT EXISTS idx_snapshots_workspace ON metrics_snapshots (workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_snapshots_project    ON metrics_snapshots (project_id, period);
 
+-- EXPERIMENTS (N2-B): registro de tests A/B, cierra el ciclo
+-- decidir (Copy Studio) -> probar -> medir (significancia determinista).
+CREATE TABLE IF NOT EXISTS experiments (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id    UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id      UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+  hypothesis      TEXT NOT NULL,
+  metric_name     TEXT NOT NULL DEFAULT 'conversión', -- qué se mide (CTR, conversión, etc.)
+  variant_a_label TEXT NOT NULL DEFAULT 'Control (A)',
+  variant_b_label TEXT NOT NULL DEFAULT 'Variante (B)',
+  visitors_a      INTEGER NOT NULL DEFAULT 0,
+  conversions_a   INTEGER NOT NULL DEFAULT 0,
+  visitors_b      INTEGER NOT NULL DEFAULT 0,
+  conversions_b   INTEGER NOT NULL DEFAULT 0,
+  status          TEXT NOT NULL DEFAULT 'running', -- running | concluded
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiments_workspace ON experiments (workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_experiments_project    ON experiments (project_id, created_at DESC);
+
 -- Aislamiento a nivel de fila. La app fija el tenant por request con:
 --   BEGIN; SET LOCAL app.workspace_id = '<uuid>'; ...; COMMIT;
 -- (ver api/middleware/workspace.js — usa SET LOCAL dentro de una transacción
@@ -141,5 +164,13 @@ ALTER TABLE metrics_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE metrics_snapshots FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON metrics_snapshots;
 CREATE POLICY tenant_isolation ON metrics_snapshots
+  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
+  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+
+-- Misma RLS para experiments.
+ALTER TABLE experiments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experiments FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON experiments;
+CREATE POLICY tenant_isolation ON experiments
   USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
   WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);

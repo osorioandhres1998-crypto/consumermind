@@ -47,3 +47,12 @@ export const getProjectTimeline = (projectId) =>
 // Copiloto IA del proyecto (N2-A).
 export const askCopilot = (projectId, question) =>
   apiFetch('/api/copilot/ask', { method: 'POST', body: JSON.stringify({ projectId, question }) });
+
+// Experimentos A/B (N2-B).
+export const listExperiments = (projectId) => apiFetch(`/api/experiments/${projectId}`);
+export const createExperiment = (projectId, body) =>
+  apiFetch(`/api/experiments/${projectId}`, { method: 'POST', body: JSON.stringify(body) });
+export const updateExperiment = (projectId, expId, body) =>
+  apiFetch(`/api/experiments/${projectId}/${expId}`, { method: 'PATCH', body: JSON.stringify(body) });
+export const deleteExperiment = (projectId, expId) =>
+  apiFetch(`/api/experiments/${projectId}/${expId}`, { method: 'DELETE' });

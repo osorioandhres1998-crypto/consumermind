@@ -60,7 +60,10 @@ export default function ProjectPage() {
           <h1>{project.name}</h1>
           <p>{project.product || 'Sin descripción del producto'}</p>
         </div>
-        <Link href={`/projects/${id}/report`} className="btn ghost sm">📄 Informe</Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link href={`/projects/${id}/experiments`} className="btn ghost sm">🧬 Experimentos</Link>
+          <Link href={`/projects/${id}/report`} className="btn ghost sm">📄 Informe</Link>
+        </div>
       </div>
 
       {/* Datos del proyecto reutilizados por los módulos */}
