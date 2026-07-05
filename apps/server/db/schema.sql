@@ -53,8 +53,12 @@ CREATE TABLE IF NOT EXISTS projects (
   price         TEXT,                     -- texto libre ("$20", "freemium"...)
   channel       TEXT,                     -- web | app | redes | ...
   landing_url   TEXT,                     -- opcional (para Landing Analyzer)
+  vertical      TEXT,                     -- ecommerce | saas | servicios (N2-C: benchmarks por industria)
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Para proyectos ya creados con el esquema anterior:
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS vertical TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_projects_workspace ON projects (workspace_id, created_at DESC);
 

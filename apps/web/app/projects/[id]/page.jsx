@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getProject, getProjectTimeline } from '../../../lib/api';
+import { getProject, getProjectTimeline, updateProject } from '../../../lib/api';
 import TrendChart from '../../../components/TrendChart';
 import Copilot from '../../../components/Copilot';
 
@@ -70,9 +70,26 @@ export default function ProjectPage() {
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="grid cols-2">
           <div><span className="stat l">Público objetivo</span><div>{project.customer || '—'}</div></div>
-          <div style={{ display: 'flex', gap: 18 }}>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
             <div><span className="stat l">Precio</span><div>{project.price || '—'}</div></div>
             <div><span className="stat l">Canal</span><div>{project.channel || '—'}</div></div>
+            <div>
+              <span className="stat l">Vertical</span>
+              <select
+                value={project.vertical || ''}
+                onChange={async (e) => {
+                  const vertical = e.target.value || null;
+                  setProject({ ...project, vertical });
+                  try { await updateProject(id, { vertical }); } catch (_) { /* ya actualizado en UI */ }
+                }}
+                style={{ padding: '3px 6px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 13 }}
+              >
+                <option value="">Sin especificar</option>
+                <option value="ecommerce">E-commerce</option>
+                <option value="saas">SaaS</option>
+                <option value="servicios">Servicios / Agencia</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

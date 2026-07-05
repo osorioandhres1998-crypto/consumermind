@@ -7,7 +7,7 @@ import { createProject } from '../../../lib/api';
 export default function NewProjectPage() {
   const router = useRouter();
   const [form, setForm] = useState({
-    name: '', product: '', customer: '', price: '', channel: '', landing_url: '',
+    name: '', product: '', customer: '', price: '', channel: '', landing_url: '', vertical: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,6 +62,15 @@ export default function NewProjectPage() {
         <div className="field">
           <label>URL de landing (opcional)</label>
           <input value={form.landing_url} onChange={set('landing_url')} placeholder="https://miproducto.com" />
+        </div>
+        <div className="field">
+          <label>Vertical <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(opcional — calibra los benchmarks de ProfitGuard y Landing Analyzer)</span></label>
+          <select value={form.vertical} onChange={set('vertical')}>
+            <option value="">Sin especificar (bandas genéricas)</option>
+            <option value="ecommerce">E-commerce</option>
+            <option value="saas">SaaS</option>
+            <option value="servicios">Servicios / Agencia</option>
+          </select>
         </div>
         <button className="btn" type="submit" disabled={loading || !form.name.trim()}>
           {loading ? <><span className="spinner" /> Creando…</> : 'Crear proyecto'}

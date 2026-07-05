@@ -16,6 +16,7 @@ import {
   ltvCacBand, paybackBand, merBand,
 } from '../../../../lib/profitability';
 import { detectAndAggregate, guessSource } from '../../../../lib/csv-import';
+import { getVerticalBenchmarks, merBandFor, ltvCacBandFor, paybackBandFor } from '../../../../lib/benchmarks-verticales';
 
 const TONES = {
   ok:     { color: '#1f9d6b', bg: '#f1faf4', border: '#cfe9d9' },
@@ -163,13 +164,15 @@ export default function ProfitabilityPage() {
     }
   };
 
-  // Prefill del precio desde el proyecto, si es parseable.
+  // Prefill del precio y vertical desde el proyecto, si es parseable.
+  const [vertical, setVertical] = useState('');
   useEffect(() => {
     (async () => {
       try {
         const p = await getProject(id);
         const n = parseNum(String(p.price || '').replace(/[^\d.,]/g, ''));
         if (n > 0) setInp((s) => ({ ...s, precio: String(n) }));
+        if (p.vertical) setVertical(p.vertical);
       } catch (_) { /* la calculadora funciona sin proyecto */ }
     })();
   }, [id]);
@@ -453,29 +456,45 @@ export default function ProfitabilityPage() {
       </div>
 
       {/* Cliente y adquisición (LTV / CAC real / MER) */}
-      <div style={{ ...secTitle, fontSize: 10.5 }}>Cliente y adquisición</div>
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 11, marginBottom: 28 }}>
-        <Metric label="LTV" value={fm.money(m.ltv)} sub={`valor de vida (${fm.money(m.ltvBruto)} bruto)`} color="#22a06b" />
-        <Metric label="CAC real (blended)" value={fm.money(m.cacReal)} sub="(ads + fijos) / clientes nuevos" />
-        <Metric
-          label="Ratio LTV/CAC"
-          value={isFinite(m.ratioLtvCac) ? m.ratioLtvCac.toFixed(2).replace('.', ',') : '∞'}
-          sub={ltvCacBand(m.ratioLtvCac).label}
-          color={TONES[ltvCacBand(m.ratioLtvCac).tone].color}
-        />
-        <Metric
-          label="Payback"
-          value={isFinite(m.paybackMeses) ? `${m.paybackMeses.toFixed(1).replace('.', ',')} meses` : '∞'}
-          sub={paybackBand(m.paybackMeses).label}
-          color={TONES[paybackBand(m.paybackMeses).tone].color}
-        />
-        <Metric
-          label="MER"
-          value={isFinite(m.mer) ? `${m.mer.toFixed(2).replace('.', ',')}×` : '∞'}
-          sub={`${merBand(m.mer).label} · ingresos / gasto total mkt`}
-          color={TONES[merBand(m.mer).tone].color}
-        />
-      </div>
+      {/* N2-C: si el proyecto tiene vertical, se usan sus bandas calibradas; si no, las genéricas (sin cambios). */}
+      {(() => {
+        const ltvCac = ltvCacBandFor(vertical, m.ratioLtvCac) || ltvCacBand(m.ratioLtvCac);
+        const payback = paybackBandFor(vertical, m.paybackMeses) || paybackBand(m.paybackMeses);
+        const mer = merBandFor(vertical, m.mer) || merBand(m.mer);
+        const vb = getVerticalBenchmarks(vertical);
+        return (
+          <>
+            <div style={{ ...secTitle, fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 8 }}>
+              Cliente y adquisición
+              {vb && <span className="tag" style={{ textTransform: 'none', fontWeight: 600 }}>Benchmarks: {vb.label}</span>}
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 11, marginBottom: 8 }}>
+              <Metric label="LTV" value={fm.money(m.ltv)} sub={`valor de vida (${fm.money(m.ltvBruto)} bruto)`} color="#22a06b" />
+              <Metric label="CAC real (blended)" value={fm.money(m.cacReal)} sub="(ads + fijos) / clientes nuevos" />
+              <Metric
+                label="Ratio LTV/CAC"
+                value={isFinite(m.ratioLtvCac) ? m.ratioLtvCac.toFixed(2).replace('.', ',') : '∞'}
+                sub={ltvCac.label}
+                color={TONES[ltvCac.tone].color}
+              />
+              <Metric
+                label="Payback"
+                value={isFinite(m.paybackMeses) ? `${m.paybackMeses.toFixed(1).replace('.', ',')} meses` : '∞'}
+                sub={payback.label}
+                color={TONES[payback.tone].color}
+              />
+              <Metric
+                label="MER"
+                value={isFinite(m.mer) ? `${m.mer.toFixed(2).replace('.', ',')}×` : '∞'}
+                sub={`${mer.label} · ingresos / gasto total mkt`}
+                color={TONES[mer.tone].color}
+              />
+            </div>
+            {vb && <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 28px' }}>ℹ️ {vb.note}</p>}
+            {!vb && <div style={{ marginBottom: 28 }} />}
+          </>
+        );
+      })()}
 
       {/* ===== 3. RECOMENDACIONES ===== */}
       <div style={secTitle}>3. Recomendaciones</div>

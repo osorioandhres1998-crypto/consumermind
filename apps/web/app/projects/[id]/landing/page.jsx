@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { getProject, apiFetch } from '../../../../lib/api';
+import { getVerticalBenchmarks } from '../../../../lib/benchmarks-verticales';
 
 const VERDICT = {
   ok:      { color: '#1f9d6b', bg: '#f1faf4', border: '#cfe9d9', label: 'OK' },
@@ -77,12 +78,14 @@ export default function LandingAnalyzerPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [vertical, setVertical] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
         const p = await getProject(id);
         if (p.landing_url) setUrl(p.landing_url);
+        if (p.vertical) setVertical(p.vertical);
         // Muestra el último análisis previo del proyecto, si existe.
         const prev = (p.analyses || []).find((a) => a.module === 'landing');
         if (prev?.result) { setResult(prev.result); if (prev.input?.url && !p.landing_url) setUrl(prev.input.url); }
@@ -93,6 +96,8 @@ export default function LandingAnalyzerPage() {
       }
     })();
   }, [id]);
+
+  const vb = getVerticalBenchmarks(vertical);
 
   const run = async (e) => {
     e?.preventDefault();
@@ -170,6 +175,13 @@ export default function LandingAnalyzerPage() {
             <ScoreCard title="Principios activos" value={<span>{r.principles_active}<span style={{ fontSize: 16, color: 'var(--muted)' }}>/9</span></span>} sub={`${9 - r.principles_active} sin explotar`} />
             <ScoreCard title="Alertas éticas" value={r.ethics_alerts} sub={r.ethics_alerts > 0 ? 'requieren revisión legal' : 'sin riesgos detectados'} color={r.ethics_alerts > 0 ? '#ef5350' : '#1f9d6b'} highlight={r.ethics_alerts > 0} />
           </div>
+
+          {/* N2-C: benchmark de score objetivo por vertical (comparativo, no altera el score) */}
+          {vb && (
+            <div className="banner" style={{ marginBottom: 20, background: r.score >= vb.landingScoreTarget ? '#f1faf4' : '#fff8ea', borderColor: r.score >= vb.landingScoreTarget ? '#cfe9d9' : '#f1e0ad', color: 'var(--text)' }}>
+              {r.score >= vb.landingScoreTarget ? '✅' : 'ℹ️'} Tu score ({r.score}) {r.score >= vb.landingScoreTarget ? 'supera' : 'está por debajo de'} el objetivo de referencia para <b>{vb.label}</b> ({vb.landingScoreTarget}/100).
+            </div>
+          )}
 
           {/* Velocidad real (PageSpeed Insights) — N1-C */}
           {r.fetch_meta?.vitals ? (

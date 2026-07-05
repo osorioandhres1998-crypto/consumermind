@@ -12,14 +12,14 @@
 
 /** Crea un proyecto en el workspace. */
 async function createProject({ db, workspaceId, userId, input }) {
-  const { name, product, customer, price, channel, landing_url } = input;
+  const { name, product, customer, price, channel, landing_url, vertical } = input;
   const { rows } = await db.query(
     `INSERT INTO projects
-       (workspace_id, created_by, name, product, customer, price, channel, landing_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING id, name, product, customer, price, channel, landing_url, created_at`,
+       (workspace_id, created_by, name, product, customer, price, channel, landing_url, vertical)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id, name, product, customer, price, channel, landing_url, vertical, created_at`,
     [workspaceId, userId, name, product || null, customer || null,
-     price || null, channel || null, landing_url || null]
+     price || null, channel || null, landing_url || null, vertical || null]
   );
   return rows[0];
 }
@@ -27,7 +27,7 @@ async function createProject({ db, workspaceId, userId, input }) {
 /** Lista los proyectos del workspace (para el dashboard). */
 async function listProjects({ db, workspaceId, limit = 50 }) {
   const { rows } = await db.query(
-    `SELECT id, name, product, customer, price, channel, landing_url, created_at
+    `SELECT id, name, product, customer, price, channel, landing_url, vertical, created_at
        FROM projects
       WHERE workspace_id = $1
       ORDER BY created_at DESC
@@ -43,7 +43,7 @@ async function listProjects({ db, workspaceId, limit = 50 }) {
  */
 async function getProject({ db, workspaceId, projectId }) {
   const { rows: proj } = await db.query(
-    `SELECT id, name, product, customer, price, channel, landing_url, created_at
+    `SELECT id, name, product, customer, price, channel, landing_url, vertical, created_at
        FROM projects
       WHERE workspace_id = $1 AND id = $2`,
     [workspaceId, projectId]
@@ -71,16 +71,16 @@ async function getProject({ db, workspaceId, projectId }) {
 
 /** Actualiza los datos editables del proyecto. */
 async function updateProject({ db, workspaceId, projectId, input }) {
-  const { name, product, customer, price, channel, landing_url } = input;
+  const { name, product, customer, price, channel, landing_url, vertical } = input;
   const { rows } = await db.query(
     `UPDATE projects
         SET name = COALESCE($3, name),
             product = $4, customer = $5, price = $6,
-            channel = $7, landing_url = $8
+            channel = $7, landing_url = $8, vertical = $9
       WHERE workspace_id = $1 AND id = $2
-      RETURNING id, name, product, customer, price, channel, landing_url, created_at`,
+      RETURNING id, name, product, customer, price, channel, landing_url, vertical, created_at`,
     [workspaceId, projectId, name || null, product || null, customer || null,
-     price || null, channel || null, landing_url || null]
+     price || null, channel || null, landing_url || null, vertical || null]
   );
   return rows[0] || null;
 }
