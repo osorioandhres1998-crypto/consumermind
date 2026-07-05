@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  getTeamOverview, createInvitation, revokeInvitation, removeMember, updateBranding,
+  getTeamOverview, createInvitation, revokeInvitation, removeMember, updateBranding, changePassword,
 } from '../../lib/api';
 
 const ROLE_LABEL = { owner: 'Owner', editor: 'Editor', viewer: 'Viewer (solo lectura)' };
@@ -149,6 +149,50 @@ export default function TeamPage() {
           {brandMsg && <div style={{ fontSize: 12.5, marginTop: 8, color: brandMsg.startsWith('✓') ? '#1f9d6b' : '#ef5350' }}>{brandMsg}</div>}
         </div>
       )}
+
+      <PasswordCard />
     </div>
+  );
+}
+
+function PasswordCard() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg('');
+    try {
+      await changePassword(currentPassword, newPassword);
+      setMsg('✓ Contraseña actualizada.');
+      setCurrentPassword(''); setNewPassword('');
+    } catch (err) {
+      setMsg(`⚠️ ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form className="card" onSubmit={submit} style={{ marginTop: 18 }}>
+      <h3 style={{ marginTop: 0 }}>🔒 Cambiar mi contraseña</h3>
+      <div className="grid cols-2">
+        <div className="field">
+          <label>Contraseña actual</label>
+          <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Contraseña nueva (mín. 8)</label>
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        </div>
+      </div>
+      <button className="btn sm" type="submit" disabled={saving || !currentPassword || newPassword.length < 8}>
+        {saving ? 'Guardando…' : 'Cambiar contraseña'}
+      </button>
+      {msg && <div style={{ fontSize: 12.5, marginTop: 8, color: msg.startsWith('✓') ? '#1f9d6b' : '#ef5350' }}>{msg}</div>}
+    </form>
   );
 }

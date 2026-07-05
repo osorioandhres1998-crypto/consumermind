@@ -21,6 +21,7 @@ const metricsRoutes = require('./api/routes/metrics.routes');
 const copilotRoutes = require('./api/routes/copilot.routes');
 const experimentsRoutes = require('./api/routes/experiments.routes');
 const teamRoutes = require('./api/routes/team.routes');
+const accountRoutes = require('./api/routes/account.routes');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/metrics', requireWorkspace, blockViewerWrites, metricsRoutes);
 app.use('/api/copilot', requireWorkspace, copilotRoutes);
 app.use('/api/experiments', requireWorkspace, blockViewerWrites, experimentsRoutes);
 app.use('/api/team', requireWorkspace, teamRoutes);
+app.use('/api/account', requireWorkspace, accountRoutes);
 
 // 404 y manejador de errores
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada.' }));

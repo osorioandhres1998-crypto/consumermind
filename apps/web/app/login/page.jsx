@@ -60,6 +60,9 @@ export default function LoginPage() {
         </button>
       </form>
       <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 14 }}>
+        <Link href="/forgot-password" style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>¿Olvidaste tu contraseña?</Link>
+      </p>
+      <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 6 }}>
         ¿No tienes cuenta? <Link href="/register" style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Crear una</Link>
       </p>
     </div>

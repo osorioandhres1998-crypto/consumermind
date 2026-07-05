@@ -67,3 +67,7 @@ export const removeMember = (id) =>
   apiFetch(`/api/team/members/${id}`, { method: 'DELETE' });
 export const updateBranding = (brandName, brandColor) =>
   apiFetch('/api/team/branding', { method: 'PATCH', body: JSON.stringify({ brandName, brandColor }) });
+
+// Cuenta (contraseña).
+export const changePassword = (currentPassword, newPassword) =>
+  apiFetch('/api/account/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });

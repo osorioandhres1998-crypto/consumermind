@@ -26,6 +26,25 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
+-- Mejoras de cuenta: visibilidad de actividad y auditoría de cambios.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- PASSWORD_RESETS: recuperación de contraseña. Igual que invitations,
+-- es pre-tenant (el usuario aún no tiene sesión) y se filtra por token,
+-- no por workspace. Token de un solo uso, expira en 1 hora.
+CREATE TABLE IF NOT EXISTS password_resets (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token       TEXT NOT NULL UNIQUE,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  used_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets (user_id, created_at DESC);
+
 -- N3-B: marca blanca del informe PDF (nombre y color del cliente/agencia).
 ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS brand_name TEXT;
 ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS brand_color TEXT;

@@ -32,4 +32,24 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Recuperación de contraseña (pre-tenant, sin JWT).
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const result = await auth.requestPasswordReset({ email: req.body.email });
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'No se pudo procesar la solicitud.' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    const result = await auth.resetPassword({ token, password });
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'No se pudo restablecer la contraseña.' });
+  }
+});
+
 module.exports = router;
