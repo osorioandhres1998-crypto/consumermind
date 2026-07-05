@@ -43,3 +43,7 @@ export const listMetricsSnapshots = (projectId) =>
   apiFetch(`/api/metrics/snapshots/${projectId}`);
 export const getProjectTimeline = (projectId) =>
   apiFetch(`/api/metrics/timeline/${projectId}`);
+
+// Copiloto IA del proyecto (N2-A).
+export const askCopilot = (projectId, question) =>
+  apiFetch('/api/copilot/ask', { method: 'POST', body: JSON.stringify({ projectId, question }) });

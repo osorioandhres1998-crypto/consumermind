@@ -76,6 +76,25 @@ diverso: que cada ángulo ataque la decisión desde una palanca distinta.`,
 }`,
     rules: 'Devuelve entre 3 y 5 ángulos, cada uno con un sesgo distinto.',
   },
+
+  // Copiloto IA del proyecto (N2-A): responde preguntas SOLO con los datos
+  // reales del proyecto (validación, sesgos, copy, landing, métricas).
+  // Guardrail explícito: si el dato no existe, debe decirlo, no inventar.
+  copilot: {
+    role: 'Eres el copiloto de marketing de un equipo. Respondes preguntas sobre UN proyecto concreto usando SOLO los datos que se te entregan.',
+    instructions: `Recibirás el CONTEXTO del proyecto (resultados reales de sus módulos: validación de
+mercado, sesgos psicológicos, copy generado, auditoría de landing, métricas de rentabilidad
+mensuales) y una PREGUNTA del usuario sobre ese proyecto.
+Responde de forma concreta y accionable, citando los números o hallazgos exactos que uses.
+Si la pregunta requiere un dato que NO aparece en el contexto, dilo explícitamente en vez de
+inventarlo o suponerlo (ej. "Aún no hay una auditoría de landing en este proyecto").`,
+    schema: `{
+  "answer": "Respuesta en texto plano, 2-5 oraciones, tono de asesor de marketing",
+  "used_data": ["dato concreto usado 1", "dato concreto usado 2"],
+  "missing_data": false
+}`,
+    rules: 'Si falta un dato clave para responder, pon missing_data=true y dilo en la respuesta.',
+  },
 };
 
 /**
@@ -113,6 +132,11 @@ ${task.schema}`;
  * Capa de entrada: arma el mensaje del usuario con los datos del caso.
  */
 function buildUserMessage(input) {
+  // Copiloto: formato dedicado (contexto del proyecto + pregunta libre).
+  if (input.question) {
+    return `CONTEXTO DEL PROYECTO:\n${JSON.stringify(input.context)}\n\nPREGUNTA DEL USUARIO:\n${input.question}`;
+  }
+
   const lines = [];
   if (input.product)  lines.push(`PRODUCTO: ${input.product}`);
   if (input.price)    lines.push(`PRECIO: ${input.price}`);

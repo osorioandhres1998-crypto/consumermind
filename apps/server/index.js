@@ -18,6 +18,7 @@ const strategyRoutes = require('./api/routes/strategy.routes');
 const copyStudioRoutes = require('./api/routes/copy-studio.routes');
 const landingRoutes = require('./api/routes/landing.routes');
 const metricsRoutes = require('./api/routes/metrics.routes');
+const copilotRoutes = require('./api/routes/copilot.routes');
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use('/api/strategy', requireWorkspace, strategyRoutes);
 app.use('/api/copy-studio', requireWorkspace, copyStudioRoutes);
 app.use('/api/landing', requireWorkspace, landingRoutes);
 app.use('/api/metrics', requireWorkspace, metricsRoutes);
+app.use('/api/copilot', requireWorkspace, copilotRoutes);
 
 // 404 y manejador de errores
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada.' }));
