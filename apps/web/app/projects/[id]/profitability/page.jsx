@@ -9,12 +9,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getProject } from '../../../../lib/api';
+import { getProject, saveMetricsSnapshot, listMetricsSnapshots } from '../../../../lib/api';
 import {
   CURRENCIES, parseNum, computeCore, diagnose,
   scenarioBudget, scenarioPrice, scenarioCvr, recommend,
   ltvCacBand, paybackBand, merBand,
 } from '../../../../lib/profitability';
+import { detectAndAggregate, guessSource } from '../../../../lib/csv-import';
 
 const TONES = {
   ok:     { color: '#1f9d6b', bg: '#f1faf4', border: '#cfe9d9' },
@@ -111,6 +112,56 @@ export default function ProfitabilityPage() {
   const [precioMult, setPrecioMult] = useState(1);
   const [cvrSlider, setCvrSlider] = useState(20); // /1000 → 2.0%
   const [barHover, setBarHover] = useState(null);
+
+  // Importador CSV (N1-A): parseo 100% en el navegador, el archivo nunca sale de aquí.
+  const [showImport, setShowImport] = useState(false);
+  const [importResult, setImportResult] = useState(null); // { ok, aggregated, headers, map, error }
+  const [importSource, setImportSource] = useState('csv');
+  const [snapPeriod, setSnapPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [saveMsg, setSaveMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    const text = await file.text();
+    const result = detectAndAggregate(text);
+    setImportResult(result);
+    setImportSource(result.ok ? guessSource(result.headers) : 'csv');
+    setSaveMsg('');
+  };
+
+  const applyImport = () => {
+    if (!importResult?.ok) return;
+    const a = importResult.aggregated;
+    setInp((s) => ({
+      ...s,
+      adsPeriodo: String(a.adsPeriodo),
+      ingresosPeriodo: String(a.ingresosPeriodo),
+      ordenesPeriodo: String(a.ordenesPeriodo),
+      cpc: a.cpc > 0 ? String(a.cpc) : s.cpc,
+    }));
+    setRoasMode('auto');
+  };
+
+  const saveSnapshot = async () => {
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      await saveMetricsSnapshot({
+        projectId: id, period: snapPeriod, source: importSource,
+        metrics: {
+          adsPeriodo: parseNum(inp.adsPeriodo), fijosMarketing: parseNum(inp.fijosMarketing),
+          ingresosPeriodo: parseNum(inp.ingresosPeriodo), ordenesPeriodo: parseNum(inp.ordenesPeriodo),
+          cpc: parseNum(inp.cpc), clientesNuevosPeriodo: parseNum(inp.clientesNuevosPeriodo) || null,
+        },
+      });
+      setSaveMsg(`✓ Guardado como snapshot de ${snapPeriod}.`);
+    } catch (e) {
+      setSaveMsg(`⚠️ ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Prefill del precio desde el proyecto, si es parseable.
   useEffect(() => {
@@ -212,6 +263,57 @@ export default function ProfitabilityPage() {
             {Object.keys(CURRENCIES).map((c) => <option key={c} value={c}>{c} · {CURRENCIES[c].symbol}</option>)}
           </select>
         </label>
+      </div>
+
+      {/* ===== Importador CSV (N1-A) — Meta Ads / Google Ads ===== */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="row" style={{ cursor: 'pointer' }} onClick={() => setShowImport(!showImport)}>
+          <b style={{ fontSize: 14 }}>📥 Importar datos reales (Meta Ads / Google Ads)</b>
+          <span style={{ color: 'var(--muted)' }}>{showImport ? '▲' : '▼'}</span>
+        </div>
+        {showImport && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 10px' }}>
+              Exporta el reporte de tu campaña desde Meta Ads Manager o Google Ads (formato CSV) y súbelo aquí.
+              El archivo se procesa en tu navegador — nunca se envía al servidor.
+            </p>
+            <input
+              type="file" accept=".csv,text/csv"
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              style={{ fontSize: 13 }}
+            />
+
+            {importResult && !importResult.ok && (
+              <div className="banner err" style={{ marginTop: 10 }}>⚠️ {importResult.error} — revisa que el archivo tenga una columna de gasto en ads.</div>
+            )}
+
+            {importResult?.ok && (
+              <div style={{ marginTop: 12 }}>
+                <div className="tag" style={{ marginBottom: 8 }}>
+                  Detectado: {importSource === 'meta' ? 'Meta Ads' : importSource === 'google' ? 'Google Ads' : 'CSV genérico'} · {importResult.rowCount} filas
+                </div>
+                <div className="grid cols-2" style={{ gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontSize: 12.5 }}>Gasto en ads: <b>{fm.money(importResult.aggregated.adsPeriodo)}</b></div>
+                  <div style={{ fontSize: 12.5 }}>Ingresos atribuidos: <b>{fm.money(importResult.aggregated.ingresosPeriodo)}</b></div>
+                  <div style={{ fontSize: 12.5 }}>Órdenes/conversiones: <b>{importResult.aggregated.ordenesPeriodo}</b></div>
+                  <div style={{ fontSize: 12.5 }}>CPC promedio: <b>{fm.money(importResult.aggregated.cpc)}</b></div>
+                </div>
+                <button className="btn sm" type="button" onClick={applyImport}>Usar estos datos en la calculadora</button>
+              </div>
+            )}
+
+            <div className="row" style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--line)', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Guardar como snapshot de:</span>
+                <input type="month" value={snapPeriod} onChange={(e) => setSnapPeriod(e.target.value)} style={{ ...fld, width: 140 }} />
+              </div>
+              <button className="btn ghost sm" type="button" onClick={saveSnapshot} disabled={saving}>
+                {saving ? 'Guardando…' : '💾 Guardar mes en el historial'}
+              </button>
+            </div>
+            {saveMsg && <div style={{ fontSize: 12.5, marginTop: 8, color: saveMsg.startsWith('✓') ? '#1f9d6b' : '#ef5350' }}>{saveMsg}</div>}
+          </div>
+        )}
       </div>
 
       {/* ===== 1. INPUTS ===== */}

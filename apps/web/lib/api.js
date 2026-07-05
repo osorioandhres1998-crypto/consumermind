@@ -35,3 +35,11 @@ export const updateProject = (id, body) =>
   apiFetch(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
 export const deleteProject = (id) =>
   apiFetch(`/api/projects/${id}`, { method: 'DELETE' });
+
+// Snapshots de métricas mensuales (N1-A) y tendencias (N1-B).
+export const saveMetricsSnapshot = (body) =>
+  apiFetch('/api/metrics/snapshots', { method: 'POST', body: JSON.stringify(body) });
+export const listMetricsSnapshots = (projectId) =>
+  apiFetch(`/api/metrics/snapshots/${projectId}`);
+export const getProjectTimeline = (projectId) =>
+  apiFetch(`/api/metrics/timeline/${projectId}`);

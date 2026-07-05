@@ -86,6 +86,25 @@ CREATE TABLE IF NOT EXISTS simulations (
 CREATE INDEX IF NOT EXISTS idx_simulations_workspace ON simulations (workspace_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_simulations_project    ON simulations (project_id);
 
+-- METRICS_SNAPSHOTS (N1-A/B del plan enterprise): agregado mensual de
+-- métricas reales de marketing (importadas de CSV de Meta/Google Ads, o
+-- ingresadas a mano) por proyecto. Alimenta el historial/tendencias (N1-B).
+-- Un snapshot por (project_id, period); reemplaza si se reimporta el mismo mes.
+CREATE TABLE IF NOT EXISTS metrics_snapshots (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id    UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+  period        TEXT NOT NULL,              -- 'YYYY-MM'
+  source        TEXT NOT NULL DEFAULT 'manual', -- meta | google | csv | manual
+  metrics       JSONB NOT NULL,             -- ads, fijos, ingresos, ordenes, clientesNuevos...
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (project_id, period)
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_workspace ON metrics_snapshots (workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_project    ON metrics_snapshots (project_id, period);
+
 -- Aislamiento a nivel de fila. La app fija el tenant por request con:
 --   BEGIN; SET LOCAL app.workspace_id = '<uuid>'; ...; COMMIT;
 -- (ver api/middleware/workspace.js — usa SET LOCAL dentro de una transacción
@@ -114,5 +133,13 @@ ALTER TABLE simulations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE simulations FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON simulations;
 CREATE POLICY tenant_isolation ON simulations
+  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
+  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+
+-- Misma RLS para metrics_snapshots.
+ALTER TABLE metrics_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE metrics_snapshots FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON metrics_snapshots;
+CREATE POLICY tenant_isolation ON metrics_snapshots
   USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
   WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
