@@ -7,6 +7,7 @@
 
 const { fetchLanding } = require('./fetcher');
 const { analyzeHtml } = require('./engine');
+const { fetchVitals } = require('./psi');
 
 /**
  * Analiza una landing y guarda el resultado en el workspace.
@@ -23,11 +24,17 @@ async function analyzeAndStore({ db, workspaceId, userId, projectId = null, url,
   let content = html;
 
   if (!content) {
-    const fetched = await fetchLanding(url); // lanza con .code si falla
+    // Descarga del HTML y consulta de Core Web Vitals reales en paralelo
+    // (N1-C): fetchVitals nunca lanza — si PageSpeed falla, ctx.vitals
+    // queda null y el motor se degrada al proxy de peso HTML.
+    const [fetched, vitals] = await Promise.all([
+      fetchLanding(url), // este sí puede lanzar con .code (URL inválida, 403, etc.)
+      fetchVitals(url),
+    ]);
     content = fetched.html;
-    ctx = { url: fetched.finalUrl, bytes: fetched.bytes };
+    ctx = { url: fetched.finalUrl, bytes: fetched.bytes, vitals };
   } else {
-    ctx.pasted = true;
+    ctx.pasted = true; // HTML pegado: sin URL pública, no aplica PageSpeed
   }
 
   const result = analyzeHtml(content, ctx);

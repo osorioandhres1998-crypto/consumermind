@@ -98,6 +98,8 @@ function analyzeHtml(html, ctx = {}) {
       url: ctx.url || null,
       html_bytes: ctx.bytes || html.length,
       js_suspected: detectJsRender($),
+      vitals: ctx.vitals || null,
+      pasted: !!ctx.pasted,
       analyzed_at: new Date().toISOString(),
     },
   };

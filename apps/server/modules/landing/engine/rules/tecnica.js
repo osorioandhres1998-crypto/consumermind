@@ -2,7 +2,11 @@
  * DIMENSIÓN 5: TÉCNICA (peso 15%)
  * Fuente: "Anatomía" §5 (carga <2s: 1s de demora = -7% conversión;
  * mobile-first; sellos de seguridad cerca del formulario; message match).
- * El peso del HTML es un proxy de velocidad — sin headless no medimos LCP real.
+ *
+ * N1-C: si ctx.vitals trae datos reales de PageSpeed Insights, se evalúan
+ * LCP/CLS/performance reales. Si no (API falló, sin URL pública, o HTML
+ * pegado), se degrada al proxy de peso del HTML — el análisis nunca se
+ * bloquea por una dependencia externa (mismo patrón que Validator).
  */
 
 const { pageText, findAny, mainFormFields } = require('../helpers');
@@ -22,11 +26,29 @@ function evaluate($, ctx) {
   add('https', 'Servida por HTTPS', https,
     ctx.url ? ctx.url.split('/').slice(0, 3).join('/') : 'URL no disponible (HTML pegado).');
 
-  // Peso del HTML (proxy de <2s de carga)
-  const kb = Math.round((ctx.bytes || 0) / 1024);
-  add('peso', 'HTML liviano (<500 KB)', ctx.bytes ? ctx.bytes < 500 * 1024 : true,
-    ctx.bytes ? `${kb} KB de HTML.` : 'Tamaño no disponible (HTML pegado).',
-    'Una demora de 1 segundo reduce conversiones un 7% (documentado).');
+  // Velocidad: vitals reales (PageSpeed) si están disponibles; si no, proxy de peso HTML.
+  const v = ctx.vitals;
+  if (v) {
+    if (v.lcpSeconds != null) {
+      add('lcp', 'LCP — Largest Contentful Paint (<2.5s)', v.lcpSeconds < 2.5,
+        `${v.lcpSeconds}s (móvil, PageSpeed Insights).`,
+        'Una demora de 1 segundo reduce conversiones un 7% (documentado).');
+    }
+    if (v.cls != null) {
+      add('cls', 'CLS — Cumulative Layout Shift (<0.1)', v.cls < 0.1,
+        `${v.cls} (móvil, PageSpeed Insights).`,
+        'Los saltos de layout frustran al usuario justo antes de convertir.');
+    }
+    if (v.performanceScore != null) {
+      add('perf_score', 'Score de rendimiento de Google (≥50)', v.performanceScore >= 50,
+        `${v.performanceScore}/100 (Lighthouse móvil).`);
+    }
+  } else {
+    const kb = Math.round((ctx.bytes || 0) / 1024);
+    add('peso', 'HTML liviano (<500 KB)', ctx.bytes ? ctx.bytes < 500 * 1024 : true,
+      ctx.bytes ? `${kb} KB de HTML (proxy de velocidad; sin datos reales de Google).` : 'Tamaño no disponible (HTML pegado).',
+      'Una demora de 1 segundo reduce conversiones un 7% (documentado).');
+  }
 
   // Lazy loading de imágenes
   const imgs = $('img').length;

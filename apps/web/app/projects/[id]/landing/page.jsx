@@ -171,6 +171,40 @@ export default function LandingAnalyzerPage() {
             <ScoreCard title="Alertas éticas" value={r.ethics_alerts} sub={r.ethics_alerts > 0 ? 'requieren revisión legal' : 'sin riesgos detectados'} color={r.ethics_alerts > 0 ? '#ef5350' : '#1f9d6b'} highlight={r.ethics_alerts > 0} />
           </div>
 
+          {/* Velocidad real (PageSpeed Insights) — N1-C */}
+          {r.fetch_meta?.vitals ? (
+            <div className="card" style={{ marginBottom: 20 }}>
+              <div className="row" style={{ marginBottom: 10 }}>
+                <b style={{ fontSize: 14 }}>⚡ Velocidad real (Google PageSpeed)</b>
+                <span className="tag gray">móvil</span>
+              </div>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                {r.fetch_meta.vitals.lcpSeconds != null && (
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: r.fetch_meta.vitals.lcpSeconds < 2.5 ? '#1f9d6b' : '#ef5350' }}>{r.fetch_meta.vitals.lcpSeconds}s</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>LCP (objetivo &lt;2.5s)</div>
+                  </div>
+                )}
+                {r.fetch_meta.vitals.cls != null && (
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: r.fetch_meta.vitals.cls < 0.1 ? '#1f9d6b' : '#ef5350' }}>{r.fetch_meta.vitals.cls}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>CLS (objetivo &lt;0.1)</div>
+                  </div>
+                )}
+                {r.fetch_meta.vitals.performanceScore != null && (
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: r.fetch_meta.vitals.performanceScore >= 50 ? '#1f9d6b' : '#ef5350' }}>{r.fetch_meta.vitals.performanceScore}/100</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>Score de rendimiento</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : !r.fetch_meta?.pasted && (
+            <div className="banner" style={{ marginBottom: 20, fontSize: 12.5 }}>
+              ℹ️ No se pudieron obtener datos reales de velocidad de Google (API no disponible en este momento) — la dimensión Técnica usó el proxy de peso del HTML.
+            </div>
+          )}
+
           {/* Semáforo ético */}
           <div className="row" style={{ marginBottom: 10 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>Semáforo ético</h2>
