@@ -16,6 +16,7 @@ export default async function Nav() {
         <>
           <Link href="/dashboard">Proyectos</Link>
           <Link href="/strategy">Análisis rápido</Link>
+          <Link href="/team">Equipo</Link>
         </>
       )}
       <span className="spacer" />

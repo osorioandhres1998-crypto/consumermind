@@ -43,9 +43,11 @@ async function listProjects({ db, workspaceId, limit = 50 }) {
  */
 async function getProject({ db, workspaceId, projectId }) {
   const { rows: proj } = await db.query(
-    `SELECT id, name, product, customer, price, channel, landing_url, vertical, created_at
-       FROM projects
-      WHERE workspace_id = $1 AND id = $2`,
+    `SELECT p.id, p.name, p.product, p.customer, p.price, p.channel, p.landing_url, p.vertical, p.created_at,
+            w.brand_name, w.brand_color
+       FROM projects p
+       JOIN workspaces w ON w.id = p.workspace_id
+      WHERE p.workspace_id = $1 AND p.id = $2`,
     [workspaceId, projectId]
   );
   if (!proj[0]) return null;

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', password: '', workspaceName: '' });
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('invite') || '';
+  const [form, setForm] = useState({ name: '', email: '', password: '', workspaceName: '', inviteToken });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,11 @@ export default function RegisterPage() {
 
   return (
     <div style={{ maxWidth: 420, margin: '40px auto' }}>
-      <div className="page-head"><h1>Crear cuenta</h1><p>Crea tu workspace. Serás el Owner.</p></div>
+      <div className="page-head">
+        <h1>Crear cuenta</h1>
+        <p>{inviteToken ? 'Te unirás al workspace de tu equipo con el rol que te asignaron.' : 'Crea tu workspace. Serás el Owner.'}</p>
+      </div>
+      {inviteToken && <div className="banner" style={{ marginBottom: 14 }}>🔗 Estás usando una invitación de equipo.</div>}
       <form className="card" onSubmit={submit}>
         <div className="field"><label>Nombre</label><input value={form.name} onChange={set('name')} autoFocus /></div>
         <div className="field"><label>Email</label><input type="email" value={form.email} onChange={set('email')} /></div>
@@ -62,7 +68,9 @@ export default function RegisterPage() {
             </button>
           </div>
         </div>
-        <div className="field"><label>Nombre del workspace (opcional)</label><input value={form.workspaceName} onChange={set('workspaceName')} placeholder="Mi equipo" /></div>
+        {!inviteToken && (
+          <div className="field"><label>Nombre del workspace (opcional)</label><input value={form.workspaceName} onChange={set('workspaceName')} placeholder="Mi equipo" /></div>
+        )}
         {error && <div className="banner err" style={{ marginBottom: 12 }}>⚠️ {error}</div>}
         <button className="btn" type="submit" disabled={loading || !form.email || form.password.length < 8}>
           {loading ? 'Creando…' : 'Crear cuenta'}

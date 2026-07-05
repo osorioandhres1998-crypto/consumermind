@@ -14,8 +14,8 @@ const auth = require('../../modules/auth/service');
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name, workspaceName } = req.body;
-    const result = await auth.register({ email, password, name, workspaceName });
+    const { email, password, name, workspaceName, inviteToken } = req.body;
+    const result = await auth.register({ email, password, name, workspaceName, inviteToken });
     res.status(201).json(result);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message || 'Error en el registro.' });

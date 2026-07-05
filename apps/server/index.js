@@ -11,7 +11,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const { requireWorkspace } = require('./api/middleware/workspace');
+const { requireWorkspace, blockViewerWrites } = require('./api/middleware/workspace');
 const authRoutes = require('./api/routes/auth.routes');
 const projectsRoutes = require('./api/routes/projects.routes');
 const strategyRoutes = require('./api/routes/strategy.routes');
@@ -20,6 +20,7 @@ const landingRoutes = require('./api/routes/landing.routes');
 const metricsRoutes = require('./api/routes/metrics.routes');
 const copilotRoutes = require('./api/routes/copilot.routes');
 const experimentsRoutes = require('./api/routes/experiments.routes');
+const teamRoutes = require('./api/routes/team.routes');
 
 const app = express();
 
@@ -38,13 +39,16 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'consumermind-api
 app.use('/api/auth', authRoutes);
 
 // Montaje de los módulos. requireWorkspace verifica el JWT y fija el tenant (RLS) por request.
-app.use('/api/projects', requireWorkspace, projectsRoutes);
-app.use('/api/strategy', requireWorkspace, strategyRoutes);
-app.use('/api/copy-studio', requireWorkspace, copyStudioRoutes);
-app.use('/api/landing', requireWorkspace, landingRoutes);
-app.use('/api/metrics', requireWorkspace, metricsRoutes);
+// blockViewerWrites (N3-A): los `viewer` solo leen. El copiloto queda exento
+// (preguntar no escribe datos) y /api/team gestiona sus permisos por rol adentro.
+app.use('/api/projects', requireWorkspace, blockViewerWrites, projectsRoutes);
+app.use('/api/strategy', requireWorkspace, blockViewerWrites, strategyRoutes);
+app.use('/api/copy-studio', requireWorkspace, blockViewerWrites, copyStudioRoutes);
+app.use('/api/landing', requireWorkspace, blockViewerWrites, landingRoutes);
+app.use('/api/metrics', requireWorkspace, blockViewerWrites, metricsRoutes);
 app.use('/api/copilot', requireWorkspace, copilotRoutes);
-app.use('/api/experiments', requireWorkspace, experimentsRoutes);
+app.use('/api/experiments', requireWorkspace, blockViewerWrites, experimentsRoutes);
+app.use('/api/team', requireWorkspace, teamRoutes);
 
 // 404 y manejador de errores
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada.' }));

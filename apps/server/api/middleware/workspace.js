@@ -55,6 +55,7 @@ async function requireWorkspace(req, res, next) {
 
   req.workspaceId = workspaceId;
   req.userId = userId;
+  req.userRole = claims.role || 'member'; // owner | editor | viewer (N3-A)
   req.db = client; // los módulos deben usar ESTE client (no el pool global)
 
   // Cierra la transacción según el resultado del request y libera el client.
@@ -78,4 +79,23 @@ async function requireWorkspace(req, res, next) {
   next();
 }
 
-module.exports = { requireWorkspace };
+/**
+ * N3-A: los `viewer` solo leen. Bloquea métodos de escritura para ese rol
+ * (se monta después de requireWorkspace en los routers de módulos).
+ */
+function blockViewerWrites(req, res, next) {
+  if (req.userRole === 'viewer' && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return res.status(403).json({ error: 'Tu rol (viewer) es de solo lectura en este workspace.' });
+  }
+  next();
+}
+
+/** N3-A: solo el Owner puede administrar el equipo y la marca. */
+function requireOwner(req, res, next) {
+  if (req.userRole !== 'owner') {
+    return res.status(403).json({ error: 'Solo el Owner del workspace puede hacer esto.' });
+  }
+  next();
+}
+
+module.exports = { requireWorkspace, blockViewerWrites, requireOwner };

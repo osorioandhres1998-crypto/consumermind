@@ -56,3 +56,14 @@ export const updateExperiment = (projectId, expId, body) =>
   apiFetch(`/api/experiments/${projectId}/${expId}`, { method: 'PATCH', body: JSON.stringify(body) });
 export const deleteExperiment = (projectId, expId) =>
   apiFetch(`/api/experiments/${projectId}/${expId}`, { method: 'DELETE' });
+
+// Equipo, roles e invitaciones (N3-A) + marca blanca del PDF (N3-B).
+export const getTeamOverview = () => apiFetch('/api/team/overview');
+export const createInvitation = (role) =>
+  apiFetch('/api/team/invitations', { method: 'POST', body: JSON.stringify({ role }) });
+export const revokeInvitation = (id) =>
+  apiFetch(`/api/team/invitations/${id}`, { method: 'DELETE' });
+export const removeMember = (id) =>
+  apiFetch(`/api/team/members/${id}`, { method: 'DELETE' });
+export const updateBranding = (brandName, brandColor) =>
+  apiFetch('/api/team/branding', { method: 'PATCH', body: JSON.stringify({ brandName, brandColor }) });

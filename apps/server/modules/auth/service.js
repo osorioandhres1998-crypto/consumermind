@@ -32,10 +32,13 @@ function publicUser(u) {
 }
 
 /**
- * Registro: crea un workspace nuevo y su usuario Owner.
+ * Registro. Dos caminos:
+ *  - Sin invitación: crea un workspace nuevo y su usuario Owner (como siempre).
+ *  - Con inviteToken (N3-A): valida la invitación y une al usuario al
+ *    workspace existente con el rol de la invitación (editor | viewer).
  * @returns {object} { token, user }
  */
-async function register({ email, password, name, workspaceName }) {
+async function register({ email, password, name, workspaceName, inviteToken }) {
   if (!email || !password) throw httpError(400, 'Email y contraseña son obligatorios.');
   if (String(password).length < 8) throw httpError(400, 'La contraseña debe tener al menos 8 caracteres.');
 
@@ -47,19 +50,43 @@ async function register({ email, password, name, workspaceName }) {
     const exists = await client.query('SELECT 1 FROM users WHERE email = $1', [normEmail]);
     if (exists.rowCount > 0) throw httpError(409, 'Ese email ya está registrado.');
 
-    const ws = await client.query(
-      `INSERT INTO workspaces (name, plan) VALUES ($1, 'free') RETURNING id`,
-      [workspaceName?.trim() || `Workspace de ${name?.trim() || normEmail}`]
-    );
-    const workspaceId = ws.rows[0].id;
+    let workspaceId;
+    let role = 'owner';
+    let invitationId = null;
+
+    if (inviteToken) {
+      const inv = await client.query(
+        `SELECT id, workspace_id, role FROM invitations
+          WHERE token = $1 AND used_by IS NULL AND expires_at > now()
+          FOR UPDATE`,
+        [inviteToken]
+      );
+      if (inv.rowCount === 0) throw httpError(400, 'La invitación no es válida o ya expiró. Pide un enlace nuevo.');
+      workspaceId = inv.rows[0].workspace_id;
+      role = inv.rows[0].role;
+      invitationId = inv.rows[0].id;
+    } else {
+      const ws = await client.query(
+        `INSERT INTO workspaces (name, plan) VALUES ($1, 'free') RETURNING id`,
+        [workspaceName?.trim() || `Workspace de ${name?.trim() || normEmail}`]
+      );
+      workspaceId = ws.rows[0].id;
+    }
 
     const hash = await bcrypt.hash(String(password), 10);
     const u = await client.query(
       `INSERT INTO users (workspace_id, email, name, password_hash, role)
-       VALUES ($1, $2, $3, $4, 'owner')
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, workspace_id, email, name, role`,
-      [workspaceId, normEmail, name?.trim() || null, hash]
+      [workspaceId, normEmail, name?.trim() || null, hash, role]
     );
+
+    if (invitationId) {
+      await client.query(
+        `UPDATE invitations SET used_by = $2, used_at = now() WHERE id = $1`,
+        [invitationId, u.rows[0].id]
+      );
+    }
 
     await client.query('COMMIT');
     const user = u.rows[0];

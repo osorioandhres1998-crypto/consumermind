@@ -30,8 +30,16 @@ function makeWriter(doc) {
   };
 }
 
-function header(w, subtitle, brand = 'ConsumerMind') {
-  w.text(brand, { size: 20, style: 'bold', color: [67, 56, 202] });
+// Convierte "#RRGGBB" a [r,g,b] para jsPDF; si no es válido, usa el índigo por defecto.
+function hexToRgb(hex, fallback = [67, 56, 202]) {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex || '');
+  if (!m) return fallback;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function header(w, subtitle, brand = 'ConsumerMind', brandColor = null) {
+  w.text(brand, { size: 20, style: 'bold', color: hexToRgb(brandColor) });
   w.text(subtitle, { size: 12, color: [110, 110, 120], gap: 4 });
   w.text(`Generado el ${new Date().toLocaleString('es-ES')}`, { size: 9, color: [150, 150, 160] });
   w.rule();
@@ -121,7 +129,8 @@ export function exportProjectReportPDF(project) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const w = makeWriter(doc);
 
-  header(w, `Informe completo — ${project.name}`, 'Master Tool');
+  // N3-B: marca blanca — si el workspace definió brand_name/brand_color, se usan aquí.
+  header(w, `Informe completo — ${project.name}`, project.brand_name || 'Master Tool', project.brand_color);
 
   // 1) Datos del proyecto
   w.text('1. Datos del proyecto', { size: 14, style: 'bold', gap: 4 });

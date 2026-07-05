@@ -26,6 +26,27 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
+-- N3-B: marca blanca del informe PDF (nombre y color del cliente/agencia).
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS brand_name TEXT;
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS brand_color TEXT;
+
+-- INVITATIONS (N3-A): invitaciones por enlace compartible (sin email en v1).
+-- Se validan PRE-tenant en /api/auth/register (como workspaces/users, sin RLS);
+-- las rutas de equipo filtran por workspace_id explícitamente.
+CREATE TABLE IF NOT EXISTS invitations (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+  role          TEXT NOT NULL DEFAULT 'editor',  -- editor | viewer
+  token         TEXT NOT NULL UNIQUE,
+  expires_at    TIMESTAMPTZ NOT NULL,
+  used_by       UUID REFERENCES users(id) ON DELETE SET NULL,
+  used_at       TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_invitations_workspace ON invitations (workspace_id, created_at DESC);
+
 -- Tabla central: resultados del motor psicológico, reusables
 -- entre módulos (Strategy escribe, Copy Studio lee y también escribe).
 CREATE TABLE IF NOT EXISTS analyses (
