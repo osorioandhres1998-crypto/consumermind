@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --watch index.js",
-    "start": "node index.js",
+    "start": "node db/migrate.js && node index.js",
     "db:migrate": "node db/migrate.js"
   },
   "dependencies": {
