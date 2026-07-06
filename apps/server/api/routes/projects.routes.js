@@ -14,11 +14,23 @@
 const express = require('express');
 const router = express.Router();
 const projects = require('../../modules/projects/service');
+const { validateBody } = require('../../lib/validate');
 
-router.post('/', async (req, res) => {
+// Bloque 1.5: esquema declarativo de los campos del proyecto.
+const projectSchema = {
+  name: { type: 'string', max: 200 },
+  product: { type: 'string', max: 2000 },
+  customer: { type: 'string', max: 2000 },
+  price: { type: 'string', max: 200 },
+  channel: { type: 'string', max: 200 },
+  landing_url: { type: 'string', max: 500 },
+  vertical: { type: 'string', enum: ['ecommerce', 'saas', 'servicios'] },
+};
+
+router.post('/', validateBody({ ...projectSchema, name: { ...projectSchema.name, required: true } }), async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name || !name.trim()) {
+    if (!name.trim()) {
       return res.status(400).json({ error: 'Se requiere "name".' });
     }
     const row = await projects.createProject({
@@ -63,7 +75,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', validateBody(projectSchema), async (req, res) => {
   try {
     const row = await projects.updateProject({
       db: req.db,

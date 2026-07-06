@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.jwt import TenantContext, require_tenant
-from app.db import save_simulation
+from app.db import save_simulation, user_in_workspace
 from app.llm.config_builder import build_simulation_plan
 from app.models.schemas import IdeaAnalysisRequest
 from app.sim.monte_carlo import run_simulation
@@ -33,6 +33,17 @@ def validate_for_project(
     construye insights y guarda todo en ``simulations``. Devuelve el resultado
     completo listo para pintar en el frontend.
     """
+    # Revocación real (Bloque 1.1): no basta el JWT — el usuario debe seguir
+    # perteneciendo al workspace en la base de datos.
+    try:
+        if not user_in_workspace(tenant.workspace_id, tenant.user_id):
+            raise HTTPException(status_code=401, detail="Tu acceso a este workspace fue revocado.")
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001 - DB caída: no bloquear con 500 críptico
+        logger.exception("No se pudo verificar la pertenencia al workspace")
+        raise HTTPException(status_code=503, detail="No se pudo verificar tu acceso. Intenta de nuevo.")
+
     overrides = request.simulation.model_dump() if request.simulation else None
     plan = build_simulation_plan(
         idea=request.idea,

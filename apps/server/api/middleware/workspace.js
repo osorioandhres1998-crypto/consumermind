@@ -43,19 +43,39 @@ async function requireWorkspace(req, res, next) {
   }
 
   let client;
+  let dbRole;
   try {
     client = await pool.connect();
     await client.query('BEGIN');
     // SET LOCAL → válido solo dentro de esta transacción/este client.
     await client.query("SELECT set_config('app.workspace_id', $1, true)", [workspaceId]);
+
+    // Revocación real (Bloque 1.1): el JWT dura días, así que NO basta con
+    // confiar en sus claims. Verificamos en cada request que el usuario siga
+    // perteneciendo al workspace y tomamos su rol FRESCO de la DB — quitar a
+    // un miembro (o bajarle el rol) surte efecto inmediato, no al expirar
+    // el token. `users` no tiene RLS, la query filtra explícitamente.
+    const { rows } = await client.query(
+      'SELECT role FROM users WHERE id = $1 AND workspace_id = $2',
+      [userId, workspaceId]
+    );
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(401).json({ error: 'Tu acceso a este workspace fue revocado. Vuelve a iniciar sesión.' });
+    }
+    dbRole = rows[0].role;
   } catch (err) {
-    if (client) client.release();
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+      client.release();
+    }
     return res.status(503).json({ error: 'Base de datos no disponible.' });
   }
 
   req.workspaceId = workspaceId;
   req.userId = userId;
-  req.userRole = claims.role || 'member'; // owner | editor | viewer (N3-A)
+  req.userRole = dbRole; // rol vigente en DB, no el del token (puede estar desactualizado)
   req.db = client; // los módulos deben usar ESTE client (no el pool global)
 
   // Cierra la transacción según el resultado del request y libera el client.

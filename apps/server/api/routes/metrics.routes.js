@@ -12,8 +12,17 @@
 const express = require('express');
 const router = express.Router();
 const metrics = require('../../modules/metrics/service');
+const { validateBody } = require('../../lib/validate');
 
-router.post('/snapshots', async (req, res) => {
+// Bloque 1.5: esquema del snapshot mensual.
+const snapshotSchema = {
+  projectId: { type: 'string', required: true, max: 100 },
+  period: { type: 'string', required: true, pattern: /^\d{4}-\d{2}$/ },
+  source: { type: 'string', enum: ['meta', 'google', 'csv', 'manual'] },
+  metrics: { type: 'object', required: true },
+};
+
+router.post('/snapshots', validateBody(snapshotSchema), async (req, res) => {
   try {
     const { projectId, period, source, metrics: data } = req.body;
     if (!projectId || !period || !data) {

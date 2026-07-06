@@ -10,8 +10,24 @@
 const express = require('express');
 const router = express.Router();
 const experiments = require('../../modules/experiments/service');
+const { validateBody } = require('../../lib/validate');
 
-router.post('/:projectId', async (req, res) => {
+// Bloque 1.5: esquemas de creación y actualización de resultados.
+const createSchema = {
+  hypothesis: { type: 'string', required: true, max: 500 },
+  metricName: { type: 'string', max: 100 },
+  variantALabel: { type: 'string', max: 100 },
+  variantBLabel: { type: 'string', max: 100 },
+};
+const resultsSchema = {
+  visitorsA: { type: 'integer', min: 0, max: 1e9 },
+  conversionsA: { type: 'integer', min: 0, max: 1e9 },
+  visitorsB: { type: 'integer', min: 0, max: 1e9 },
+  conversionsB: { type: 'integer', min: 0, max: 1e9 },
+  status: { type: 'string', enum: ['running', 'concluded'] },
+};
+
+router.post('/:projectId', validateBody(createSchema), async (req, res) => {
   try {
     const row = await experiments.createExperiment({
       db: req.db, workspaceId: req.workspaceId, userId: req.userId,
@@ -35,7 +51,7 @@ router.get('/:projectId', async (req, res) => {
   }
 });
 
-router.patch('/:projectId/:expId', async (req, res) => {
+router.patch('/:projectId/:expId', validateBody(resultsSchema), async (req, res) => {
   try {
     const row = await experiments.updateResults({
       db: req.db, workspaceId: req.workspaceId, experimentId: req.params.expId, input: req.body,

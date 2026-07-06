@@ -11,8 +11,15 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../modules/auth/service');
+const { rateLimit } = require('../middleware/rate-limit');
 
-router.post('/register', async (req, res) => {
+// Bloque 1.2: límites por minuto contra fuerza bruta (clave = IP + email).
+const loginLimit = rateLimit(10, 'login');
+const registerLimit = rateLimit(5, 'register');
+const forgotLimit = rateLimit(5, 'forgot-password');
+const resetLimit = rateLimit(10, 'reset-password');
+
+router.post('/register', registerLimit, async (req, res) => {
   try {
     const { email, password, name, workspaceName, inviteToken } = req.body;
     const result = await auth.register({ email, password, name, workspaceName, inviteToken });
@@ -22,7 +29,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
     const result = await auth.login({ email, password });
@@ -33,7 +40,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Recuperación de contraseña (pre-tenant, sin JWT).
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotLimit, async (req, res) => {
   try {
     const result = await auth.requestPasswordReset({ email: req.body.email });
     res.json(result);
@@ -42,7 +49,7 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetLimit, async (req, res) => {
   try {
     const { token, password } = req.body;
     const result = await auth.resetPassword({ token, password });

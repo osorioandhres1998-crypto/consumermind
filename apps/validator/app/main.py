@@ -18,10 +18,16 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS abierto para facilitar la integración con el frontend Next.js en local.
+# CORS (Bloque 1.4): restringido a WEB_ORIGIN en producción. En la práctica
+# el navegador nunca llama directo (todo pasa por el proxy server-side de
+# Next, donde CORS no aplica), pero cerrar el origen es higiene básica.
+# Sin WEB_ORIGIN definida (desarrollo local) se mantiene abierto.
+import os
+
+_web_origin = os.environ.get("WEB_ORIGIN")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[_web_origin] if _web_origin else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

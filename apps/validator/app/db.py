@@ -23,6 +23,20 @@ def _connect() -> psycopg.Connection:
     return psycopg.connect(DATABASE_URL)
 
 
+def user_in_workspace(workspace_id: str, user_id: str | None) -> bool:
+    """Revocación real (Bloque 1.1): el JWT dura días; verificamos en DB que
+    el usuario siga perteneciendo al workspace antes de aceptar la simulación."""
+    if not user_id:
+        return False
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM users WHERE id = %s AND workspace_id = %s",
+                (user_id, workspace_id),
+            )
+            return cur.fetchone() is not None
+
+
 def save_simulation(
     *,
     workspace_id: str,
