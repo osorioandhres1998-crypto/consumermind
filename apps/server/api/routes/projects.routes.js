@@ -55,6 +55,10 @@ router.get('/:id', async (req, res) => {
     res.json(row);
   } catch (err) {
     console.error('[projects/get]', err.message);
+    // Columna/tabla inexistente = casi siempre esquema desincronizado (falta migrar).
+    if (err.code === '42703' || err.code === '42P01') {
+      return res.status(500).json({ error: 'La base de datos no está actualizada (falta migrar el esquema). Corre `npm run db:migrate`.' });
+    }
     res.status(500).json({ error: 'No se pudo obtener el proyecto.' });
   }
 });

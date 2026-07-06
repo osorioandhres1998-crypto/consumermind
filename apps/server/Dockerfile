@@ -17,4 +17,9 @@ ENV NODE_ENV=production
 EXPOSE 3001
 
 WORKDIR /app/apps/server
-CMD ["node", "index.js"]
+
+# Migra el esquema (idempotente: todo con IF NOT EXISTS) antes de arrancar,
+# para que un commit con tablas/columnas nuevas nunca quede desincronizado
+# de la base de datos en producción. Si la migración falla, el deploy falla
+# de forma visible en vez de arrancar con un esquema desactualizado.
+CMD ["sh", "-c", "node db/migrate.js && node index.js"]
