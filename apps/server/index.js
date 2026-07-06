@@ -5,6 +5,7 @@
  * la base de datos (regla inviolable de CLAUDE.md). El frontend solo
  * habla con /api/...; jamás con el proveedor de IA directo.
  * Motor: Groq (modelos open-source).
+ * El arranque en producción migra el esquema automáticamente (ver Dockerfile).
  */
 
 require('dotenv').config();
