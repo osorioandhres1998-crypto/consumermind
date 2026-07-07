@@ -93,6 +93,24 @@ async function register({ email, password, name, workspaceName, inviteToken }) {
       );
     }
 
+    // Onboarding (Bloque 3.3): workspace nuevo → proyecto de ejemplo listo
+    // para explorar, en vez de un dashboard vacío. `projects` tiene RLS
+    // FORCE, así que fijamos el tenant dentro de ESTA transacción.
+    if (!inviteToken) {
+      await client.query("SELECT set_config('app.workspace_id', $1, true)", [workspaceId]);
+      await client.query(
+        `INSERT INTO projects (workspace_id, created_by, name, product, customer, price, channel, vertical, landing_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          workspaceId, u.rows[0].id,
+          '📘 Proyecto de ejemplo — explóralo',
+          'Ebook de recetas saludables para bebés (6-24 meses), con plan semanal descargable',
+          'Padres primerizos, 28-40 años, preocupados por la alimentación de su bebé; compran por Instagram y buscan respaldo de nutricionistas',
+          '$20', 'landing + Instagram Ads', 'ecommerce', null,
+        ]
+      );
+    }
+
     await client.query('COMMIT');
     const user = u.rows[0];
     return { token: signToken(user), user: publicUser(user) };

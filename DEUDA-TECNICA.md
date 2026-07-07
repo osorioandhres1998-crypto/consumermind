@@ -79,7 +79,7 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** reduce el tiempo de detección de fallos de horas a minutos.
 - **Propuesta:** Sentry (gratis, tier básico) para errores de backend/frontend + UptimeRobot (gratis) monitoreando `/health` de ambos backends.
 - **Esfuerzo:** S
-- **Estado:** ☐
+- **Estado:** ✅ UptimeRobot configurado (2 monitores /health cada 5 min con alerta a email). Sentry queda como opcional futuro.
 
 ### 2.5 Repo fuera de OneDrive
 - **Qué falta:** el proyecto vive en una carpeta sincronizada por OneDrive (`Desktop\Demo - MVP`), lo que ya causó un error de build (`EINVAL: readlink`).
@@ -97,7 +97,7 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** es lo primero que buscaría un reclutador o un cliente potencial; irónico no tener una landing propia teniendo un Landing Analyzer.
 - **Propuesta:** landing simple con el propio sistema de diseño de la app, aplicando sus propios principios de conversión.
 - **Esfuerzo:** M
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — la home pública (`apps/web/app/page.jsx`) ahora es una landing completa con el framework del propio Landing Analyzer (hero→problema→solución→herramientas→pasos→FAQs→CTA final) y sus reglas éticas (sin testimonios inventados ni urgencia falsa). Pendiente natural: escanearla con el propio Landing Analyzer cuando esté desplegada.
 
 ### 3.2 Analítica de uso propio
 - **Qué falta:** no se mide qué módulos se usan más, dónde abandonan los usuarios, tiempo en cada herramienta.
@@ -111,7 +111,7 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** el primer login es el momento más crítico de activación; hoy no hay nada que reduzca la fricción inicial.
 - **Propuesta:** proyecto demo precargado al registrarse, o un tour guiado de 3 pasos.
 - **Esfuerzo:** M
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — todo workspace nuevo (registro sin invitación) nace con "📘 Proyecto de ejemplo" precargado (producto/cliente/precio/vertical listos para lanzar cualquier herramienta de una).
 
 ### 3.4 Exportación accionable del copy generado
 - **Qué falta:** Copy Studio genera headlines/CTAs pero no los exporta en formatos listos para usar (Meta Ads, Google RSA con límites de caracteres, UTMs).
