@@ -33,7 +33,7 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** riesgo bajo mientras sea uso interno, pero debe resolverse antes de cualquier usuario externo real.
 - **Propuesta:** generar nuevas credenciales en Railway (Postgres) y un nuevo `BACKEND_JWT_SECRET`, actualizar variables en ambos servicios (server + validator) y en Vercel si aplica.
 - **Esfuerzo:** S
-- **Estado:** ⏸️ Pendiente de acción del dueño (pasos exactos entregados; requiere consola de Railway).
+- **Estado:** ✅ Completado — `BACKEND_JWT_SECRET` rotado en ambos servicios (invalidó todas las sesiones) y contraseña de Postgres rotada vía `ALTER USER` + actualización de `POSTGRES_PASSWORD` y `DATABASE_URL` en server y validator. Ambos backends verificados con /health 200 tras la rotación.
 
 ### 1.4 CORS abierto en el Validator
 - **Qué falta:** `apps/validator/app/main.py` permite `allow_origins=["*"]`.
