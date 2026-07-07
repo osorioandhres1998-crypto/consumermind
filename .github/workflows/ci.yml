@@ -1,0 +1,45 @@
+# CI del master-tool (Bloque 2.2 de DEUDA-TECNICA.md)
+# ------------------------------------------------------------
+# En cada push/PR a main corre los casos de prueba ancla (CLAUDE.md §5)
+# y el build del frontend. Si un número ancla se mueve o el build se
+# rompe, el push queda marcado en rojo ANTES de que Railway/Vercel
+# desplieguen algo defectuoso.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests-y-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # npm ci exige el lock sincronizado — el mismo contrato que Railway
+      # (trampa #2 de CLAUDE.md): si falla aquí, fallaría el deploy también.
+      - name: Instalar dependencias (monorepo)
+        run: npm ci
+
+      - name: Tests ancla — Landing Analyzer (motor determinista)
+        run: node tests/landing-engine.test.js
+        working-directory: apps/server
+
+      - name: Tests ancla — Significancia A/B
+        run: node tests/significance.test.js
+        working-directory: apps/server
+
+      - name: Tests ancla — ProfitGuard (economía unitaria + LTV/MER)
+        run: node apps/web/tests/profitability.test.mjs
+
+      - name: Build del frontend (Next.js)
+        run: npm run build
+        working-directory: apps/web

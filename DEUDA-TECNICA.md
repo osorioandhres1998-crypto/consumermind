@@ -58,14 +58,14 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** un `DELETE` accidental o una migración mala borra datos sin forma de recuperarlos.
 - **Propuesta:** script de `pg_dump` semanal (manual o cron) descargado localmente; evaluar plan de Railway con backups automáticos si el presupuesto lo permite.
 - **Esfuerzo:** S
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — `apps/server/scripts/backup-db.js` (Node puro, sin pg_dump) exporta todas las tablas a `backups/` (gitignoreada). Primer backup real ejecutado y verificado. **Rutina sugerida: correrlo 1 vez/semana.** Complemento: revisar la pestaña "Backups" del servicio Postgres en Railway.
 
 ### 2.2 CI básico (GitHub Actions)
 - **Qué falta:** los casos de prueba ancla (`landing-engine.test.js`, build de Next.js) se corren manualmente y a veces se olvidan.
 - **Por qué importa:** varios de los tropiezos de deploy de esta sesión se habrían detectado antes de llegar a Railway.
 - **Propuesta:** workflow de GitHub Actions que en cada push a `main` corra: `node tests/landing-engine.test.js` (apps/server) + `npm run build` (apps/web).
 - **Esfuerzo:** S
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — `.github/workflows/ci.yml` corre en cada push/PR: tests ancla de Landing (94/22/52), significancia A/B y ProfitGuard (nuevos archivos de test en `apps/server/tests/` y `apps/web/tests/`) + build de Next.js + `npm ci` (valida el lock como Railway).
 
 ### 2.3 Entorno de staging
 - **Qué falta:** no existe separación entre desarrollo y producción; todo se prueba directamente en la app real.

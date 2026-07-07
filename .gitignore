@@ -8,3 +8,6 @@ dist
 .env
 .env.*
 !.env.example
+
+# Backups de la base (contienen datos de clientes) — nunca commitear
+backups/
