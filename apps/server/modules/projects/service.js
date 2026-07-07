@@ -71,18 +71,44 @@ async function getProject({ db, workspaceId, projectId }) {
   return { ...proj[0], analyses, simulations };
 }
 
-/** Actualiza los datos editables del proyecto. */
+/**
+ * Actualiza los datos editables del proyecto — UPDATE parcial: solo toca
+ * los campos que vienen en el body (undefined = no cambiar; '' = limpiar).
+ * CORRECCIÓN de bug latente: la versión anterior escribía TODOS los campos
+ * con null si no venían, así que actualizar solo el vertical (selector de
+ * la vista del proyecto) borraba producto/cliente/precio/canal.
+ */
 async function updateProject({ db, workspaceId, projectId, input }) {
-  const { name, product, customer, price, channel, landing_url, vertical } = input;
+  const allowed = ['name', 'product', 'customer', 'price', 'channel', 'landing_url', 'vertical'];
+  const sets = [];
+  const vals = [workspaceId, projectId];
+
+  for (const key of allowed) {
+    if (input[key] === undefined) continue; // no enviado → no se toca
+    if (key === 'name' && (!input.name || !String(input.name).trim())) {
+      const e = new Error('El nombre del proyecto no puede quedar vacío.');
+      e.status = 400;
+      throw e;
+    }
+    vals.push(input[key] === '' || input[key] === null ? null : input[key]);
+    sets.push(`${key} = $${vals.length}`);
+  }
+
+  if (sets.length === 0) {
+    // Nada que actualizar: devuelve el estado actual.
+    const { rows } = await db.query(
+      `SELECT id, name, product, customer, price, channel, landing_url, vertical, created_at
+         FROM projects WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, projectId]
+    );
+    return rows[0] || null;
+  }
+
   const { rows } = await db.query(
-    `UPDATE projects
-        SET name = COALESCE($3, name),
-            product = $4, customer = $5, price = $6,
-            channel = $7, landing_url = $8, vertical = $9
+    `UPDATE projects SET ${sets.join(', ')}
       WHERE workspace_id = $1 AND id = $2
       RETURNING id, name, product, customer, price, channel, landing_url, vertical, created_at`,
-    [workspaceId, projectId, name || null, product || null, customer || null,
-     price || null, channel || null, landing_url || null, vertical || null]
+    vals
   );
   return rows[0] || null;
 }

@@ -86,6 +86,7 @@ router.patch('/:id', validateBody(projectSchema), async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Proyecto no encontrado.' });
     res.json(row);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     console.error('[projects/update]', err.message);
     res.status(500).json({ error: 'No se pudo actualizar el proyecto.' });
   }

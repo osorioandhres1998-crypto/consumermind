@@ -16,6 +16,19 @@ export async function apiFetch(path, options = {}) {
       msg = j.error || j.detail || msg;
       if (typeof msg !== 'string') msg = JSON.stringify(msg);
     } catch (_) { /* respuesta sin JSON */ }
+
+    // Sesión muerta (token del backend inválido/expirado/revocado — p. ej.
+    // tras rotar BACKEND_JWT_SECRET o quitar al miembro del workspace):
+    // cerrar la sesión de NextAuth y llevar al login, en vez de dejar al
+    // usuario en una app que falla en cada acción.
+    if (res.status === 401 && typeof window !== 'undefined') {
+      try {
+        const { signOut } = await import('next-auth/react');
+        await signOut({ callbackUrl: '/login' });
+      } catch (_) {
+        window.location.href = '/login';
+      }
+    }
     throw new Error(msg);
   }
   if (res.status === 204) return null; // sin cuerpo (p. ej. DELETE)
