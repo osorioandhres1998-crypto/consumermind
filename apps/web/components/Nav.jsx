@@ -14,8 +14,8 @@ export default async function Nav() {
       </Link>
       {session?.user && (
         <>
-          <Link href="/dashboard">Proyectos</Link>
-          <Link href="/strategy">Análisis rápido</Link>
+          <Link href="/dashboard">Herramientas</Link>
+          <Link href="/projects">Proyectos</Link>
           <Link href="/team">Equipo</Link>
         </>
       )}

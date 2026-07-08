@@ -7,6 +7,9 @@ export const config = {
     '/projects/:path*',
     '/strategy/:path*',
     '/copy-studio/:path*',
+    '/validator/:path*',
+    '/landing/:path*',
+    '/profitability/:path*',
     '/team/:path*',
   ],
 };

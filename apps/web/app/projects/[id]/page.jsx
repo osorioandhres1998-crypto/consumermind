@@ -52,7 +52,7 @@ export default function ProjectPage() {
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        <Link href="/dashboard" style={{ color: 'var(--muted)', fontSize: 13 }}>← Mis proyectos</Link>
+        <Link href="/projects" style={{ color: 'var(--muted)', fontSize: 13 }}>← Mis proyectos</Link>
       </div>
 
       <div className="row" style={{ marginBottom: 18 }}>

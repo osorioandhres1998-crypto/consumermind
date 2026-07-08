@@ -21,17 +21,9 @@ router = APIRouter(tags=["integration"])
 logger = get_logger(__name__)
 
 
-@router.post("/projects/{project_id}/validate")
-def validate_for_project(
-    project_id: str,
-    request: IdeaAnalysisRequest,
-    tenant: TenantContext = Depends(require_tenant),
-) -> dict:
-    """Corre la simulación para un proyecto y persiste el resultado.
-
-    Genera arquetipos (IA o heurística), ejecuta Monte Carlo de forma síncrona,
-    construye insights y guarda todo en ``simulations``. Devuelve el resultado
-    completo listo para pintar en el frontend.
+def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_id: str | None) -> dict:
+    """Lógica compartida: valida el acceso, corre Monte Carlo, genera insights
+    y persiste. project_id=None ⇒ simulación 'rápida' sin proyecto (standalone).
     """
     # Revocación real (Bloque 1.1): no basta el JWT — el usuario debe seguir
     # perteneciendo al workspace en la base de datos.
@@ -79,7 +71,7 @@ def validate_for_project(
         sim_id = save_simulation(
             workspace_id=tenant.workspace_id,
             user_id=tenant.user_id,
-            project_id=project_id,
+            project_id=project_id,  # None en modo standalone (columna nullable)
             config=plan["config"],
             results=full,
             archetypes=archetypes,
@@ -99,3 +91,22 @@ def validate_for_project(
         "insights": insights,
         **full,
     }
+
+
+@router.post("/projects/{project_id}/validate")
+def validate_for_project(
+    project_id: str,
+    request: IdeaAnalysisRequest,
+    tenant: TenantContext = Depends(require_tenant),
+) -> dict:
+    """Corre la simulación atada a un proyecto y persiste el resultado."""
+    return _run_and_store(request, tenant, project_id)
+
+
+@router.post("/validate")
+def validate_standalone(
+    request: IdeaAnalysisRequest,
+    tenant: TenantContext = Depends(require_tenant),
+) -> dict:
+    """Simulación 'rápida' sin proyecto (herramienta standalone del hub)."""
+    return _run_and_store(request, tenant, None)

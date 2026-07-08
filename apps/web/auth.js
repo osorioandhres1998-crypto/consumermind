@@ -65,6 +65,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         p.startsWith('/projects') ||
         p.startsWith('/strategy') ||
         p.startsWith('/copy-studio') ||
+        p.startsWith('/validator') ||
+        p.startsWith('/landing') ||
+        p.startsWith('/profitability') ||
         p.startsWith('/team');
       if (isProtected) return !!auth;
       return true;
