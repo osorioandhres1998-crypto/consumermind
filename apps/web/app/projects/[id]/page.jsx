@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { getProject, getProjectTimeline, updateProject } from '../../../lib/api';
 import TrendChart from '../../../components/TrendChart';
-import Copilot from '../../../components/Copilot';
 
 // Definición de los módulos del master-tool. `status` se calcula del historial.
 const MODULES = [
@@ -169,8 +168,6 @@ export default function ProjectPage() {
           return <Link key={m.key} href={`/projects/${id}/${m.key}`}>{card}</Link>;
         })}
       </div>
-
-      <Copilot projectId={id} />
     </div>
   );
 }
