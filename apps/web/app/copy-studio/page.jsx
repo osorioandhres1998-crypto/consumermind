@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useCopyGeneration } from '../../hooks/useCopyGeneration';
 import { listStrategyAnalyses } from '../../lib/api';
 import { exportCopyPDF } from '../../lib/pdf';
+import CopyExportButtons from '../../components/CopyExportButtons';
 
 function CopyResult({ data }) {
   const mode = data.mode || (data.result?.angles ? 'angles' : 'copy');
@@ -134,9 +135,12 @@ export default function CopyStudioPage() {
 
       {result && !loading && (
         <div>
-          <div className="row" style={{ marginBottom: 12 }}>
+          <div className="row" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
             <h2 style={{ margin: 0 }}>{(result.mode || mode) === 'angles' ? 'Ángulos creativos' : 'Copy'}</h2>
-            <button className="btn ghost" onClick={() => exportCopyPDF(result)}>⬇ Exportar PDF</button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <CopyExportButtons result={result} />
+              <button className="btn ghost sm" onClick={() => exportCopyPDF(result)}>⬇ PDF</button>
+            </div>
           </div>
           <CopyResult data={result} />
         </div>

@@ -118,14 +118,14 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** es el "último kilómetro" que un marketer usa a diario; hoy el copy se queda dentro de la app.
 - **Propuesta:** botón de exportación con formatos específicos por plataforma publicitaria.
 - **Esfuerzo:** M
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — botones "📋 Meta Ads" y "📋 Google RSA" (+ asuntos de email) en ambos Copy Studio: copian al portapapeles el copy formateado con los límites de caracteres reales de cada plataforma anotados por línea (✓ o ⚠ RECORTAR) + plantilla UTM sugerida (`lib/copy-export.js`).
 
 ### 3.5 Alertas proactivas
 - **Qué falta:** el valor de medir MER/ROAS mensualmente se pierde si nadie revisa el dashboard a tiempo.
 - **Por qué importa:** convierte la herramienta de "consulta pasiva" a "asesor activo".
 - **Propuesta:** email automático (ya hay integración con Resend) cuando una métrica cae fuera de su banda sana.
 - **Esfuerzo:** M
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — al guardar un snapshot mensual cuyo MER caiga bajo el umbral de riesgo de su vertical (ecommerce <3 / saas <2.5 / servicios <2), se envía email de alerta al usuario (disparo por evento, sin cron; fire-and-forget: nunca rompe el guardado; sin RESEND_API_KEY queda en logs).
 
 ### 3.6 Validación de benchmarks contra casos reales
 - **Qué falta:** los benchmarks (ProfitGuard, Landing Analyzer) nunca se validaron contra negocios reales, aunque la spec original lo definía como su "métrica ancla de credibilidad".
