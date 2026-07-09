@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getProject, apiFetch } from '../../lib/api';
+import { track } from '../../lib/analytics';
 
 const OBJECTION_LABELS = {
   precio_alto: 'Precio alto',
@@ -81,6 +82,7 @@ export default function ValidatorTool({ projectId = null }) {
     try {
       const path = projectId ? `/api/validator/projects/${projectId}/validate` : '/api/validator/validate';
       setResult(await apiFetch(path, { method: 'POST', body: JSON.stringify(form) }));
+      track('tool_run', { tool: 'validator', mode: projectId ? 'project' : 'standalone' });
     } catch (err) {
       setError(err.message);
     } finally {

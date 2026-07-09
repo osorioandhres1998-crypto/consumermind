@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getProject, apiFetch } from '../../lib/api';
 import { getVerticalBenchmarks } from '../../lib/benchmarks-verticales';
+import { track } from '../../lib/analytics';
 
 const VERDICT = {
   ok:      { color: '#1f9d6b', bg: '#f1faf4', border: '#cfe9d9', label: 'OK' },
@@ -106,6 +107,7 @@ export default function LandingTool({ projectId = null }) {
         body: JSON.stringify({ url, projectId: projectId || undefined, html: showPaste && pastedHtml.trim() ? pastedHtml : undefined }),
       });
       setResult(data.result);
+      track('tool_run', { tool: 'landing', mode: projectId ? 'project' : 'standalone', score: data.result?.score });
       if (!showPaste && data.result?.fetch_meta?.js_suspected) setShowPaste(true);
     } catch (err) {
       setError(err.message);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createProject } from '../../../lib/api';
+import { track } from '../../../lib/analytics';
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function NewProjectPage() {
     setError('');
     try {
       const proj = await createProject(form);
+      track('project_created', { vertical: form.vertical || 'sin_especificar' });
       router.push(`/projects/${proj.id}`);
     } catch (err) {
       setError(err.message);

@@ -1,6 +1,7 @@
 import './styles.css';
 import Nav from '../components/Nav';
 import Copilot from '../components/Copilot';
+import AnalyticsProvider from '../components/AnalyticsProvider';
 import { auth } from '../auth';
 
 export const metadata = {
@@ -13,6 +14,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>
+        <AnalyticsProvider userId={session?.user?.id || null} role={session?.user?.role || null} />
         <Nav />
         <div className="container">{children}</div>
         {/* Copiloto global: solo para usuarios logueados (en páginas públicas

@@ -104,7 +104,7 @@ Cada ítem tiene: **qué falta**, **por qué importa**, **esfuerzo estimado** y 
 - **Por qué importa:** sin esto, las decisiones de producto son por intuición — lo mismo que la app critica en otros.
 - **Propuesta:** integrar PostHog (tier gratuito) para trackear eventos clave (crear proyecto, ejecutar cada módulo, exportar informe).
 - **Esfuerzo:** S-M
-- **Estado:** ☐
+- **Estado:** ✅ Implementado — posthog-js con degradación elegante (sin key = no-op). AnalyticsProvider en el layout captura pageviews por ruta e identifica al usuario; eventos `project_created` y `tool_run` (validator/landing). **Falta acción del dueño:** pegar `NEXT_PUBLIC_POSTHOG_KEY` (y `NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com`) en Vercel.
 
 ### 3.3 Onboarding / dashboard vacío
 - **Qué falta:** un usuario nuevo ve "Aún no tienes proyectos" sin ninguna guía.

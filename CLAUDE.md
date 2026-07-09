@@ -43,7 +43,7 @@ Navegador ──► Vercel: apps/web (Next.js 14 App Router + NextAuth v5)
 
 ## 3. Reglas INVIOLABLES
 
-1. **Las API keys viven SOLO en los backends.** `GROQ_API_KEY` en apps/server; `ANTHROPIC_API_KEY` (opcional) en apps/validator. Nunca en apps/web, nunca `NEXT_PUBLIC_*`, el navegador jamás llama a proveedores de IA.
+1. **Las API keys viven SOLO en los backends.** `GROQ_API_KEY` en apps/server; `ANTHROPIC_API_KEY` (opcional) en apps/validator. Nunca en apps/web, nunca `NEXT_PUBLIC_*`, el navegador jamás llama a proveedores de IA. *Excepción documentada:* `NEXT_PUBLIC_POSTHOG_KEY` es la clave de ingesta PÚBLICA de PostHog (write-only, diseñada para el navegador), no un secreto — no viola esta regla.
 2. **Multi-tenant por RLS.** Todo acceso a tablas con RLS (`analyses`, `projects`, `simulations`, `metrics_snapshots`, `experiments`) va por el client del request: `requireWorkspace` abre transacción + `SET LOCAL app.workspace_id` sobre un client dedicado (`req.db`). **Nunca uses el pool global en módulos de negocio** (fuga de tenant). Tablas pre-tenant sin RLS: `workspaces`, `users`, `invitations`, `password_resets` — solo se tocan desde auth/team con filtros explícitos.
 3. **Un solo JWT (HS256, `BACKEND_JWT_SECRET`)** con claims `{ sub, workspaceId, role }`, emitido por Express y verificado también por el Validator Python. El mismo secreto en ambos servicios de Railway.
 4. **Roles:** `owner` (todo + equipo/marca), `editor` (usa herramientas), `viewer` (solo lectura — `blockViewerWrites` bloquea escrituras en todos los módulos salvo el copiloto). `requireOwner` protege /api/team administrativo.
