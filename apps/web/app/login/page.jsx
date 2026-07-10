@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AuthBackground from '../../components/AuthBackground';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,9 +30,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ maxWidth: 380, margin: '40px auto' }}>
-      <div className="page-head"><h1>Entrar</h1><p>Accede a tu workspace.</p></div>
+    <div style={{ maxWidth: 380, margin: '0 auto' }}>
+      <AuthBackground />
+      <div className="auth-headline">
+        <h1>Impulsa tu marketing</h1>
+        <p>Entra a tu workspace y sigue tus campañas.</p>
+      </div>
       <form className="card" onSubmit={submit}>
+        <h2 style={{ margin: '0 0 2px', fontSize: 20 }}>Entrar</h2>
+        <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 14 }}>Accede a tu workspace.</p>
         <div className="field">
           <label>Email</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />

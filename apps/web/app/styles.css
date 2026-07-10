@@ -103,3 +103,30 @@ pre.copy {
 .stat .n { font-size: 28px; font-weight: 700; }
 .stat .l { font-size: 13px; color: var(--muted); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+/* ===== Fondo de páginas de autenticación (login/register/forgot/reset) ===== */
+.auth-hero { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.auth-grad {
+  position: absolute; top: 0; left: 0; right: 0; height: 62vh;
+  background: linear-gradient(135deg, #4338CA 0%, #6366F1 52%, #3B82F6 100%);
+}
+.auth-circle { position: absolute; border-radius: 50%; }
+.auth-wave { position: absolute; top: calc(62vh - 90px); left: 0; width: 100%; height: 160px; display: block; }
+
+/* Nav transparente flotando sobre el gradiente en páginas de auth */
+.auth-page .nav {
+  position: absolute; top: 0; left: 0; right: 0;
+  background: transparent; z-index: 3;
+}
+.auth-page .nav a { color: #ffffffe6; }
+.auth-page .nav a:hover { background: #ffffff26; color: #fff; }
+.auth-page .nav a.active { background: #fff; color: var(--indigo-600); }
+.auth-page .nav a.active:hover { background: #fff; }
+
+/* El contenido (headline + tarjeta) va por encima del fondo */
+.auth-page .container { position: relative; z-index: 1; padding-top: 84px; }
+
+/* Titular blanco del hero de auth */
+.auth-headline { text-align: center; margin: 8px 0 22px; color: #fff; }
+.auth-headline h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 6px; }
+.auth-headline p { font-size: 15px; margin: 0; color: #ffffffd9; }
