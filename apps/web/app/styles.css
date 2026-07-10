@@ -105,7 +105,10 @@ pre.copy {
 .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 
 /* ===== Fondo de páginas de autenticación (login/register/forgot/reset) ===== */
-.auth-hero { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+/* z-index NEGATIVO: los elementos posicionados con z>=0 se pintan ENCIMA del
+   contenido normal (tarjeta, titular), tapándolos. Con -1, el fondo queda
+   detrás de todo el contenido pero encima del fondo del body. */
+.auth-hero { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .auth-grad {
   position: absolute; top: 0; left: 0; right: 0; height: 62vh;
   background: linear-gradient(135deg, #4338CA 0%, #6366F1 52%, #3B82F6 100%);
@@ -123,8 +126,11 @@ pre.copy {
 .auth-page .nav a.active { background: #fff; color: var(--indigo-600); }
 .auth-page .nav a.active:hover { background: #fff; }
 
-/* El contenido (headline + tarjeta) va por encima del fondo */
+/* El contenido (headline + tarjeta) va por encima del fondo — cinturón y
+   tirantes: además del z negativo del hero, la tarjeta y el titular se
+   posicionan explícitamente sobre él. */
 .auth-page .container { position: relative; z-index: 1; padding-top: 84px; }
+.auth-page .card, .auth-page .auth-headline { position: relative; z-index: 1; }
 
 /* Titular blanco del hero de auth */
 .auth-headline { text-align: center; margin: 8px 0 22px; color: #fff; }
