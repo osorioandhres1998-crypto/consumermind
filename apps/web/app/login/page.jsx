@@ -23,7 +23,10 @@ export default function LoginPage() {
     if (r?.error) {
       setError('Credenciales inválidas. Verifica tu email y contraseña.');
     } else if (r?.ok) {
-      router.push('/dashboard');
+      // Navegación completa, NO router.push: el Router Cache del cliente
+      // guarda hasta 30s el redirect a /login previo a la sesión, y un
+      // push lo reproduce (obligaba a "loguearse varias veces").
+      window.location.assign('/dashboard');
     } else {
       setError('Error al iniciar sesión. Intenta de nuevo.');
     }

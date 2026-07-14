@@ -32,7 +32,9 @@ export default function RegisterPage() {
       // Cuenta creada → inicia sesión y entra.
       const r = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
       if (r?.error) throw new Error('Cuenta creada, pero falló el inicio de sesión.');
-      router.push('/dashboard');
+      // Navegación completa, NO router.push: evita reproducir el redirect
+      // a /login que el Router Cache guardó antes de existir la sesión.
+      window.location.assign('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
