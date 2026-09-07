@@ -192,6 +192,65 @@ function SimulationV2Card({ v2 }) {
   );
 }
 
+/* Fase 1.3 — panel de personas sintéticas: señal RELATIVA (qué segmento
+   responde mejor, qué objeción domina), nunca un % real de compra. */
+const INTENT_COLOR = (i) => (i >= 4 ? '#16a34a' : i === 3 ? '#d97706' : '#dc2626');
+
+function PanelCard({ panel }) {
+  if (!panel || !(panel.responses || []).length) return null;
+  const maxObj = Math.max(...(panel.objections || []).map((o) => o.share), 0.001);
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 4 }}>
+        <h3 style={{ margin: 0 }}>Panel de clientes simulados</h3>
+        <span className="tag gray">{panel.source === 'claude' ? 'IA (Claude)' : 'Plantilla sin IA'}</span>
+      </div>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>
+        Cada arquetipo leyó tu propuesta y respondió como en una entrevista corta. Úsalo para ver <b>qué segmento responde mejor</b> y <b>qué objeción domina</b>; no es un porcentaje real de compra.
+      </p>
+      <div className="grid cols-2" style={{ marginBottom: 14 }}>
+        <div className="stat card" style={{ boxShadow: 'none' }}>
+          <div className="n" style={{ color: INTENT_COLOR(Math.round(panel.intent_mean || 0)) }}>{panel.intent_mean ?? '–'}<span style={{ fontSize: 14, color: 'var(--muted)' }}> / 5</span></div>
+          <div className="l">Intención media ponderada · {panel.intent_label}</div>
+        </div>
+        <div className="stat card" style={{ boxShadow: 'none' }}>
+          <div className="n">{pct0(panel.top2box || 0)}</div>
+          <div className="l">del mercado simulado con intención 4-5</div>
+        </div>
+      </div>
+      {(panel.objections || []).length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Objeciones dominantes (entre quienes no comprarían)</div>
+          {panel.objections.map((o) => (
+            <div key={o.category} style={{ marginBottom: 10 }}>
+              <Bar label={o.label} value={o.share} max={maxObj} color="#dc2626" />
+              {o.quotes?.length > 0 && (
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -2, paddingLeft: 2 }}>
+                  {o.quotes.map((q, i) => <div key={i}>“{q}”</div>)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="grid cols-2">
+        {panel.responses.map((r) => (
+          <div key={r.persona} className="card" style={{ boxShadow: 'none', padding: 14 }}>
+            <div className="row" style={{ marginBottom: 6 }}>
+              <b style={{ fontSize: 14 }}>{r.persona}</b>
+              <span className="tag" style={{ background: INTENT_COLOR(r.intent) + '1a', color: INTENT_COLOR(r.intent) }}>{'●'.repeat(r.intent)}{'○'.repeat(5 - r.intent)} {r.intent}/5</span>
+            </div>
+            {r.first_reaction && <p style={{ margin: '0 0 8px', fontSize: 13.5, fontStyle: 'italic' }}>“{r.first_reaction}”</p>}
+            {r.main_objection && <p style={{ margin: '0 0 6px', fontSize: 13 }}><b style={{ color: '#dc2626' }}>Objeción:</b> {r.main_objection}</p>}
+            {r.what_would_convince && <p style={{ margin: '0 0 6px', fontSize: 13 }}><b style={{ color: '#16a34a' }}>Lo convencería:</b> {r.what_would_convince}</p>}
+            {r.question && <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}><b>Preguntaría:</b> {r.question}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Bar({ label, value, max = 1, color = 'var(--indigo)' }) {
   const w = max ? Math.max(2, (value / max) * 100) : 0;
   return (
@@ -311,6 +370,7 @@ export default function ValidatorTool({ projectId = null }) {
 
           <RubricCard rubric={result.rubric} />
           <SimulationV2Card v2={result.v2} />
+          <PanelCard panel={result.panel} />
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div style={{ display: 'flex', gap: 30, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -323,12 +383,12 @@ export default function ValidatorTool({ projectId = null }) {
           </div>
 
           <div className="grid cols-2">
-            <div className="card">
+            {!result.panel?.responses?.length && <div className="card">
               <h3 style={{ marginTop: 0 }}>Principales objeciones</h3>
               {(result.top_objections || []).map((o) => (
                 <Bar key={o.objection} label={OBJECTION_LABELS[o.objection] || o.objection} value={o.frequency} max={maxObj} color="#dc2626" />
               ))}
-            </div>
+            </div>}
             {!result.v2 && <div className="card">
               <h3 style={{ marginTop: 0 }}>Importancia de características</h3>
               {(result.feature_importance || []).map((f) => (

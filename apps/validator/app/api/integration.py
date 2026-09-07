@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth.jwt import TenantContext, require_tenant
 from app.db import save_simulation, user_in_workspace
 from app.llm.config_builder import build_simulation_plan
+from app.llm.personas import get_persona_panel
 from app.llm.rubric import get_rubric_evaluator
 from app.sim.monte_carlo_v2 import run_simulation_v2
 from app.models.schemas import IdeaAnalysisRequest
@@ -83,6 +84,20 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
             )
         except Exception:  # noqa: BLE001
             logger.exception("Falló el Monte Carlo v2 project=%s", project_id)
+
+    # Fase 1.3 — panel de personas sintéticas: objeciones específicas al
+    # producto en vez de las 3 etiquetas fijas del v1. Opcional.
+    try:
+        full["panel"] = get_persona_panel().respond(
+            request.idea,
+            request.target_audience,
+            plan.get("archetypes", []),
+            price=request.price,
+            alternatives=request.alternatives,
+            channel=request.channel,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Falló el panel de personas project=%s", project_id)
 
     # Insights en lenguaje natural (Claude si hay clave; si no, heurística).
     insights = None
