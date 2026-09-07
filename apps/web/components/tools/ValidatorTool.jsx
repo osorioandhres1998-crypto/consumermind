@@ -111,6 +111,87 @@ function RubricCard({ rubric }) {
   );
 }
 
+/* Fase 1.2 — Monte Carlo v2: la banda p5–p95 es la incertidumbre declarada en
+   la rúbrica propagada al resultado (no ruido de muestreo). */
+function Band({ label, s, color = 'var(--indigo)' }) {
+  if (!s) return null;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div className="row" style={{ marginBottom: 4 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 13 }}><b>{pct0(s.p50)}</b> <span style={{ color: 'var(--muted)' }}>· plausible {pct0(s.p5)}–{pct0(s.p95)}</span></span>
+      </div>
+      <div style={{ position: 'relative', height: 10, background: '#eceef4', borderRadius: 99 }}>
+        <div style={{ position: 'absolute', left: `${s.p5 * 100}%`, width: `${Math.max(0, (s.p95 - s.p5) * 100)}%`, height: '100%', background: color, opacity: .25, borderRadius: 99 }} />
+        <div style={{ position: 'absolute', left: `${s.p25 * 100}%`, width: `${Math.max(0, (s.p75 - s.p25) * 100)}%`, height: '100%', background: color, opacity: .55, borderRadius: 99 }} />
+        <div style={{ position: 'absolute', left: `calc(${s.p50 * 100}% - 1.5px)`, width: 3, height: '100%', background: color, borderRadius: 2 }} />
+      </div>
+    </div>
+  );
+}
+
+function SimulationV2Card({ v2 }) {
+  if (!v2) return null;
+  const maxImp = Math.max(...(v2.sensitivity || []).map((x) => x.importance), 0.001);
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 4 }}>
+        <h3 style={{ margin: 0 }}>Adopción estimada</h3>
+        <span className="tag">Monte Carlo v2 · {v2.execution_metrics?.n_iterations?.toLocaleString?.() || ''} escenarios</span>
+      </div>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>
+        Cada escenario muestrea las dimensiones de la rúbrica dentro de su rango y simula la reacción de cada segmento con el precio propuesto.
+        La banda es lo que no sabes todavía; la mediana, la estimación central.
+      </p>
+      <div className="grid cols-2">
+        <div>
+          <Band label="Adopción de la audiencia" s={v2.adoption} />
+          <Band label="Intención de compra" s={v2.purchase_intent} color="#16a34a" />
+          {(v2.by_segment || []).length > 1 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Por segmento</div>
+              {v2.by_segment.map((sg) => (
+                <div key={sg.name} style={{ marginBottom: 8 }}>
+                  <div className="row" style={{ marginBottom: 3 }}>
+                    <span style={{ fontSize: 13 }}>{sg.name} <span className="tag gray" style={{ marginLeft: 4 }}>{pct0(sg.share)} del mercado</span></span>
+                    <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{pct0(sg.adoption.p50)} <span style={{ opacity: .7 }}>({pct0(sg.adoption.p5)}–{pct0(sg.adoption.p95)})</span></span>
+                  </div>
+                  <div style={{ height: 6, background: '#eceef4', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ width: `${sg.adoption.p50 * 100}%`, height: '100%', background: 'var(--indigo)' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Qué duda pesa más en el resultado</div>
+          <p style={{ margin: '0 0 8px', color: 'var(--muted)', fontSize: 12.5 }}>Cuanto más alta, más conviene validar esa dimensión primero: es la que más mueve la adopción.</p>
+          {(v2.sensitivity || []).map((x) => (
+            <Bar key={x.key} label={x.label} value={x.importance} max={maxImp} />
+          ))}
+          {(v2.price_curve || []).length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Curva precio → adopción</div>
+              <table style={{ width: '100%', fontSize: 12.5, borderCollapse: 'collapse' }}>
+                <tbody>
+                  {v2.price_curve.map((p) => (
+                    <tr key={p.multiplier} style={{ background: p.multiplier === 1 ? 'var(--indigo-50)' : 'transparent' }}>
+                      <td style={{ padding: '4px 6px', fontWeight: p.multiplier === 1 ? 700 : 400 }}>{p.multiplier === 1 ? 'Precio propuesto' : `×${p.multiplier}`}</td>
+                      <td style={{ padding: '4px 6px', color: 'var(--muted)' }}>{p.price}</td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right' }}><b>{pct0(p.adoption_mean)}</b> <span style={{ color: 'var(--muted)' }}>({pct0(p.adoption_p5)}–{pct0(p.adoption_p95)})</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Bar({ label, value, max = 1, color = 'var(--indigo)' }) {
   const w = max ? Math.max(2, (value / max) * 100) : 0;
   return (
@@ -229,6 +310,7 @@ export default function ValidatorTool({ projectId = null }) {
           </div>
 
           <RubricCard rubric={result.rubric} />
+          <SimulationV2Card v2={result.v2} />
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div style={{ display: 'flex', gap: 30, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -247,12 +329,12 @@ export default function ValidatorTool({ projectId = null }) {
                 <Bar key={o.objection} label={OBJECTION_LABELS[o.objection] || o.objection} value={o.frequency} max={maxObj} color="#dc2626" />
               ))}
             </div>
-            <div className="card">
+            {!result.v2 && <div className="card">
               <h3 style={{ marginTop: 0 }}>Importancia de características</h3>
               {(result.feature_importance || []).map((f) => (
                 <Bar key={f.feature} label={f.feature} value={f.importance} max={maxFeat} color="var(--indigo)" />
               ))}
-            </div>
+            </div>}
           </div>
 
           {(result.archetypes || []).length > 0 && (

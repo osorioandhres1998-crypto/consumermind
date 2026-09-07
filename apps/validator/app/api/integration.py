@@ -14,6 +14,7 @@ from app.auth.jwt import TenantContext, require_tenant
 from app.db import save_simulation, user_in_workspace
 from app.llm.config_builder import build_simulation_plan
 from app.llm.rubric import get_rubric_evaluator
+from app.sim.monte_carlo_v2 import run_simulation_v2
 from app.models.schemas import IdeaAnalysisRequest
 from app.sim.monte_carlo import run_simulation
 from app.utils.logging import get_logger
@@ -67,6 +68,21 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
         )
     except Exception:  # noqa: BLE001
         logger.exception("No se pudo evaluar la rúbrica project=%s", project_id)
+
+    # Fase 1.2 — Monte Carlo v2: propaga la incertidumbre de la rúbrica por
+    # segmento, con el precio real. Convive con el v1 hasta que la UI lo
+    # retire (Fase 1.4). Opcional: si falla, no rompe la respuesta.
+    if full.get("rubric"):
+        try:
+            full["v2"] = run_simulation_v2(
+                full["rubric"],
+                plan.get("archetypes", []),
+                price=request.price,
+                n_iterations=int(plan["config"].get("n_iterations", 10000)),
+                random_seed=plan["config"].get("random_seed", 42),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Falló el Monte Carlo v2 project=%s", project_id)
 
     # Insights en lenguaje natural (Claude si hay clave; si no, heurística).
     insights = None
