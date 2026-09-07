@@ -83,6 +83,15 @@ class IdeaAnalysisRequest(BaseModel):
     )
     n_archetypes: int = Field(8, ge=1, le=12)
     simulation: SimulationOverrides | None = None
+    # Fase 1.1 — contexto opcional para la rúbrica (reduce la incertidumbre declarada).
+    price: str | None = Field(None, description="Precio propuesto (texto libre).")
+    alternatives: str | None = Field(
+        None, description="Cómo resuelve hoy el problema la audiencia."
+    )
+    channel: str | None = Field(None, description="Canal principal de adquisición.")
+    insights_raw: str | None = Field(
+        None, description="Evidencia real: entrevistas, ventas, soporte, redes."
+    )
 
 
 class MetricSummary(BaseModel):

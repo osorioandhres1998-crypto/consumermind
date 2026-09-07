@@ -18,6 +18,9 @@ const OBJECTION_LABELS = {
   no_lo_necesita: 'No lo necesita',
 };
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
+const pct0 = (v) => `${Math.round(v * 100)}%`;
+const EMPTY_FORM = { idea: '', target_audience: '', price: '', alternatives: '', channel: '', insights_raw: '' };
+const CONFIDENCE_TAG = { baja: 'red', media: 'amber', alta: 'green' };
 
 function Gauge({ value, label }) {
   const r = 52;
@@ -33,6 +36,77 @@ function Gauge({ value, label }) {
         <text x="65" y="80" textAnchor="middle" fontSize="11" fill="#6b7180">media</text>
       </svg>
       <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{label}</div>
+    </div>
+  );
+}
+
+/* Fase 1.1 — rúbrica con incertidumbre explícita: cada dimensión muestra su
+   puntuación central y el rango [low, high] que el evaluador declara no saber. */
+function RangeBar({ label, score, low, high, hypothesis }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div className="row" style={{ marginBottom: 3 }}>
+        <span style={{ fontSize: 13 }}>
+          {label} {hypothesis && <span className="tag gray" style={{ marginLeft: 4 }}>hipótesis</span>}
+        </span>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{pct0(score)} <span style={{ opacity: .7 }}>({pct0(low)}–{pct0(high)})</span></span>
+      </div>
+      <div style={{ position: 'relative', height: 8, background: '#eceef4', borderRadius: 99 }}>
+        <div style={{ position: 'absolute', left: `${low * 100}%`, width: `${Math.max(0, (high - low) * 100)}%`, height: '100%', background: 'var(--indigo-50)', border: '1px solid #c7d2fe', borderRadius: 99 }} />
+        <div style={{ position: 'absolute', left: `calc(${score * 100}% - 5px)`, top: -2, width: 12, height: 12, borderRadius: '50%', background: 'var(--indigo)', boxShadow: '0 0 0 2px #fff' }} />
+      </div>
+    </div>
+  );
+}
+
+function RubricCard({ rubric }) {
+  if (!rubric) return null;
+  const o = rubric.overall || {};
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 4 }}>
+        <h3 style={{ margin: 0 }}>Evaluación de la idea</h3>
+        <span className={`tag ${CONFIDENCE_TAG[rubric.confidence] || 'gray'}`}>confianza {rubric.confidence}</span>
+      </div>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 13 }}>
+        Puntuación global <b style={{ color: 'var(--text)' }}>{pct0(o.score ?? 0)}</b> · rango plausible {pct0(o.low ?? 0)}–{pct0(o.high ?? 0)}.
+        El rango es lo que el modelo declara <b>no saber</b>: cuanto más ancho, más hipótesis y menos evidencia.
+      </p>
+      <div className="grid cols-2">
+        <div>
+          {(rubric.dimensions || []).map((d) => (
+            <RangeBar key={d.key} label={d.label} score={d.score} low={d.low} high={d.high} hypothesis={d.is_hypothesis} />
+          ))}
+        </div>
+        <div>
+          {(rubric.dimensions || []).filter((d) => d.rationale).length > 0 && (
+            <details open>
+              <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Justificación por dimensión</summary>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--muted)' }}>
+                {rubric.dimensions.filter((d) => d.rationale).map((d) => (
+                  <li key={d.key} style={{ marginBottom: 4 }}><b style={{ color: 'var(--text)' }}>{d.label}:</b> {d.rationale}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {(rubric.key_assumptions || []).length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Debe ser cierto para que funcione</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                {rubric.key_assumptions.map((a, i) => <li key={i} style={{ marginBottom: 4 }}>{a}</li>)}
+              </ul>
+            </div>
+          )}
+          {(rubric.missing_info || []).length > 0 && (
+            <div className="banner" style={{ marginTop: 12, marginBottom: 0 }}>
+              <b>Para estrechar el rango:</b>
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                {rubric.missing_info.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -53,7 +127,7 @@ function Bar({ label, value, max = 1, color = 'var(--indigo)' }) {
 }
 
 export default function ValidatorTool({ projectId = null }) {
-  const [form, setForm] = useState({ idea: '', target_audience: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [ready, setReady] = useState(!projectId);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -64,7 +138,7 @@ export default function ValidatorTool({ projectId = null }) {
     (async () => {
       try {
         const p = await getProject(projectId);
-        setForm({ idea: p.product || '', target_audience: p.customer || '' });
+        setForm({ ...EMPTY_FORM, idea: p.product || '', target_audience: p.customer || '', price: p.price || '', channel: p.channel || '' });
       } catch (e) {
         setError(e.message);
       } finally {
@@ -104,7 +178,7 @@ export default function ValidatorTool({ projectId = null }) {
       )}
       <div className="page-head">
         <h1>🧪 MVP Validator</h1>
-        <p>Simula audiencias y predice la aceptación del mercado con un motor Monte Carlo (miles de iteraciones).</p>
+        <p>Evalúa tu idea con una rúbrica que declara su incertidumbre, y simula la reacción de la audiencia. Cuanto más contexto real aportes, más estrecho el rango.</p>
       </div>
 
       <form className="card" onSubmit={run} style={{ marginBottom: 22 }}>
@@ -116,6 +190,29 @@ export default function ValidatorTool({ projectId = null }) {
           <label>Público objetivo *</label>
           <input value={form.target_audience} onChange={set('target_audience')} placeholder="A quién va dirigido" />
         </div>
+        <details style={{ marginBottom: 14 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--indigo-600)' }}>
+            Contexto opcional — reduce la incertidumbre de la evaluación
+          </summary>
+          <div className="grid cols-2" style={{ marginTop: 12 }}>
+            <div className="field">
+              <label>Precio propuesto</label>
+              <input value={form.price} onChange={set('price')} placeholder="$29/mes, $297 único…" />
+            </div>
+            <div className="field">
+              <label>Canal principal</label>
+              <input value={form.channel} onChange={set('channel')} placeholder="Instagram Ads, SEO, ventas directas…" />
+            </div>
+          </div>
+          <div className="field">
+            <label>¿Cómo resuelve hoy el problema tu audiencia?</label>
+            <textarea value={form.alternatives} onChange={set('alternatives')} placeholder="Competidores, Excel, un freelancer, o simplemente no hacer nada…" />
+          </div>
+          <div className="field">
+            <label>Evidencia real (entrevistas, ventas, soporte, redes)</label>
+            <textarea value={form.insights_raw} onChange={set('insights_raw')} placeholder="Pega frases textuales de clientes potenciales. Sin evidencia, todo queda marcado como hipótesis." />
+          </div>
+        </details>
         <button className="btn" type="submit" disabled={loading || form.idea.length < 10 || form.target_audience.length < 3}>
           {loading ? <><span className="spinner" /> Simulando…</> : '🧪 Validar MVP'}
         </button>
@@ -130,6 +227,8 @@ export default function ValidatorTool({ projectId = null }) {
             <h2 style={{ margin: 0 }}>Resultado de la simulación</h2>
             <span className="tag gray">{result.audience_source === 'claude' ? 'IA (Claude)' : 'Heurístico'}</span>
           </div>
+
+          <RubricCard rubric={result.rubric} />
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div style={{ display: 'flex', gap: 30, justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth.jwt import TenantContext, require_tenant
 from app.db import save_simulation, user_in_workspace
 from app.llm.config_builder import build_simulation_plan
+from app.llm.rubric import get_rubric_evaluator
 from app.models.schemas import IdeaAnalysisRequest
 from app.sim.monte_carlo import run_simulation
 from app.utils.logging import get_logger
@@ -51,6 +52,21 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
         raise HTTPException(status_code=502, detail=f"La simulación falló: {exc}")
 
     full.pop("raw_samples", None)  # no persistimos las muestras crudas aquí
+
+    # Fase 1.1 — rúbrica con incertidumbre explícita. Viaja dentro de `results`
+    # para persistirse sin tocar el esquema de `simulations`. Opcional: si falla
+    # no rompe la simulación (el evaluador ya degrada a heurística por dentro).
+    try:
+        full["rubric"] = get_rubric_evaluator().evaluate(
+            request.idea,
+            request.target_audience,
+            price=request.price,
+            alternatives=request.alternatives,
+            channel=request.channel,
+            insights_raw=request.insights_raw,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("No se pudo evaluar la rúbrica project=%s", project_id)
 
     # Insights en lenguaje natural (Claude si hay clave; si no, heurística).
     insights = None
