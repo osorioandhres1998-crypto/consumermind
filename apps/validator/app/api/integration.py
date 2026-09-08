@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth.jwt import TenantContext, require_tenant
 from app.db import save_simulation, user_in_workspace
 from app.llm.config_builder import build_simulation_plan
+from app.llm.demand_signals import get_demand_signals
 from app.llm.personas import get_persona_panel
 from app.llm.rubric import get_rubric_evaluator
 from app.sim.monte_carlo_v2 import run_simulation_v2
@@ -55,6 +56,17 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
 
     full.pop("raw_samples", None)  # no persistimos las muestras crudas aquí
 
+    # Fase 2.2 — señales de demanda externas (Bright Data + Claude). Opcional:
+    # sin token degrada a source="none" y la rúbrica sigue sin evidencia web.
+    external_evidence = None
+    try:
+        full["signals"] = get_demand_signals().collect(
+            request.idea, request.target_audience, alternatives=request.alternatives
+        )
+        external_evidence = full["signals"].get("evidence_text") or None
+    except Exception:  # noqa: BLE001
+        logger.exception("Fallaron las señales de demanda project=%s", project_id)
+
     # Fase 1.1 — rúbrica con incertidumbre explícita. Viaja dentro de `results`
     # para persistirse sin tocar el esquema de `simulations`. Opcional: si falla
     # no rompe la simulación (el evaluador ya degrada a heurística por dentro).
@@ -66,6 +78,7 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
             alternatives=request.alternatives,
             channel=request.channel,
             insights_raw=request.insights_raw,
+            external_evidence=external_evidence,
         )
     except Exception:  # noqa: BLE001
         logger.exception("No se pudo evaluar la rúbrica project=%s", project_id)

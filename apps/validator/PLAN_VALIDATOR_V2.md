@@ -27,7 +27,7 @@
 
 ### Fase 2 — Anclas externas
 | 2.1 | Benchmarks por vertical (`benchmarks-verticales.js` → compartir con Python) como priors del `adoption` por segmento. | ✅ |
-| 2.2 | Señales de demanda reales (opcional, Bright Data): volumen de búsqueda, competidores, reseñas → `evidence` en la rúbrica. | ⬜ |
+| 2.2 | Señales de demanda reales (opcional, Bright Data): volumen de búsqueda, competidores, reseñas → `evidence` en la rúbrica. | ✅ |
 | 2.3 | Conectar Audience Research (JTBD) como paso previo: segmentos → arquetipos. | ⬜ |
 
 ### Fase 3 — Cierre del ciclo

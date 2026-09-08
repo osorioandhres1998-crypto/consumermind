@@ -67,7 +67,10 @@ function RubricCard({ rubric }) {
     <div className="card" style={{ marginBottom: 14 }}>
       <div className="row" style={{ marginBottom: 4 }}>
         <h3 style={{ margin: 0 }}>Evaluación de la idea</h3>
-        <span className={`tag ${CONFIDENCE_TAG[rubric.confidence] || 'gray'}`}>confianza {rubric.confidence}</span>
+        <span style={{ display: 'flex', gap: 6 }}>
+          {(rubric.evidence_sources || []).map((s) => <span key={s} className="tag green">evidencia: {s}</span>)}
+          <span className={`tag ${CONFIDENCE_TAG[rubric.confidence] || 'gray'}`}>confianza {rubric.confidence}</span>
+        </span>
       </div>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 13 }}>
         Puntuación global <b style={{ color: 'var(--text)' }}>{pct0(o.score ?? 0)}</b> · rango plausible {pct0(o.low ?? 0)}–{pct0(o.high ?? 0)}.
@@ -258,6 +261,82 @@ function PanelCard({ panel }) {
   );
 }
 
+/* Fase 2.2 — señales de demanda externas (búsqueda web real). */
+function SignalsCard({ signals }) {
+  if (!signals) return null;
+  if (signals.source === 'none' || !(signals.results || []).length) {
+    return (
+      <div className="banner" style={{ marginBottom: 14 }}>
+        🔎 <b>Sin evidencia externa.</b> {signals.note || 'No se pudieron buscar señales de demanda.'} Sin ella, la rúbrica se apoya solo en tu descripción.
+      </div>
+    );
+  }
+  const sg = signals.signals;
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 4 }}>
+        <h3 style={{ margin: 0 }}>Evidencia externa (búsqueda web)</h3>
+        <span className="tag green">{signals.results.length} resultados · {signals.queries?.length || 0} búsquedas</span>
+      </div>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 13 }}>
+        Lo que ya existe en el mercado sobre esta idea. Ancla la rúbrica: las dimensiones respaldadas por esto dejan de ser hipótesis puras. No sustituye hablar con clientes.
+      </p>
+      {sg ? (
+        <div className="grid cols-2">
+          <div>
+            {sg.evidence_summary && <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 500 }}>{sg.evidence_summary}</p>}
+            {sg.demand_indicators && <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--muted)' }}><b style={{ color: 'var(--text)' }}>Señal de demanda:</b> {sg.demand_indicators}</p>}
+            {(sg.competitors || []).length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Competidores y alternativas</div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                  {sg.competitors.map((c, i) => (
+                    <li key={i} style={{ marginBottom: 3 }}>
+                      {c.url ? <a href={c.url} target="_blank" rel="noreferrer" style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>{c.name}</a> : <b>{c.name}</b>}
+                      {c.note && <span style={{ color: 'var(--muted)' }}> — {c.note}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(sg.price_points || []).length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {sg.price_points.map((p, i) => <span key={i} className="tag amber">{p}</span>)}
+              </div>
+            )}
+          </div>
+          <div>
+            {(sg.problem_language || []).length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Cómo habla la gente del problema</div>
+                {sg.problem_language.map((q, i) => <div key={i} style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--muted)', marginBottom: 3 }}>“{q}”</div>)}
+              </div>
+            )}
+            {(sg.gaps || []).length > 0 && (
+              <div className="banner" style={{ marginBottom: 0 }}>
+                <b>No se pudo confirmar:</b>
+                <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{sg.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+          {signals.results.slice(0, 8).map((r, i) => (
+            <li key={i} style={{ marginBottom: 4 }}><a href={r.url} target="_blank" rel="noreferrer" style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>{r.title || r.url}</a><span style={{ color: 'var(--muted)' }}> — {r.snippet}</span></li>
+          ))}
+        </ul>
+      )}
+      <details style={{ marginTop: 10 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--muted)' }}>Ver las {signals.results.length} fuentes</summary>
+        <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 12.5 }}>
+          {signals.results.map((r, i) => <li key={i}><a href={r.url} target="_blank" rel="noreferrer" style={{ color: 'var(--indigo-600)' }}>{r.title || r.url}</a></li>)}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
 function Bar({ label, value, max = 1, color = 'var(--indigo)' }) {
   const w = max ? Math.max(2, (value / max) * 100) : 0;
   return (
@@ -406,6 +485,7 @@ export default function ValidatorTool({ projectId = null }) {
             </p>
           )}
 
+          <SignalsCard signals={result.signals} />
           <RubricCard rubric={result.rubric} />
           <SimulationV2Card v2={result.v2} />
           <PanelCard panel={result.panel} />

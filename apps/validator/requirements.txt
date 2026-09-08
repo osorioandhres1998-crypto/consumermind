@@ -12,6 +12,10 @@ joblib==1.4.2
 #     heurística determinista si no hay ANTHROPIC_API_KEY. ---
 anthropic==0.39.0
 
+# --- Señales de demanda externas (Fase 2.2). Opcional en runtime: sin
+#     BRIGHTDATA_API_TOKEN el validator sigue funcionando sin evidencia web. ---
+brightdata-sdk==2.5.2
+
 # --- Integración master-tool: validar JWT del backend Node + Postgres compartida ---
 PyJWT==2.9.0
 psycopg[binary]==3.2.3

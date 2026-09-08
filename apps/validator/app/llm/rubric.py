@@ -127,6 +127,7 @@ def derive_confidence(
     has_insights: bool,
     has_price: bool,
     has_alternatives: bool,
+    has_external: bool = False,
 ) -> str:
     """Confianza del modelo en su propia evaluación.
 
@@ -137,6 +138,8 @@ def derive_confidence(
     points = 0
     if has_insights:
         points += 1
+    if has_external:
+        points += 1  # Fase 2.2: señales web reales (competidores, precios, voz del cliente)
     if has_price and has_alternatives:
         points += 1
     spread = sum(d["high"] - d["low"] for d in dimensions.values()) / len(dimensions)
@@ -207,12 +210,14 @@ def build_rubric(
     channel: str | None,
     insights_raw: str | None,
     source: str,
+    external_evidence: str | None = None,
 ) -> dict[str, Any]:
     """Ensambla la rúbrica final a partir de dimensiones crudas (LLM o heurística)."""
     dims = {k: normalize_dimension(dimensions_raw.get(k)) for k in DIMENSION_KEYS}
     has_insights = bool(insights_raw and insights_raw.strip())
-    if not has_insights:
-        # Sin evidencia real todo es hipótesis, diga lo que diga el modelo.
+    has_external = bool(external_evidence and external_evidence.strip())
+    if not has_insights and not has_external:
+        # Sin evidencia (del usuario o web) todo es hipótesis, diga lo que diga el modelo.
         for d in dims.values():
             d["is_hypothesis"] = True
     overall = weighted_overall(dims)
@@ -221,7 +226,9 @@ def build_rubric(
         has_insights=has_insights,
         has_price=bool(price and price.strip()),
         has_alternatives=bool(alternatives and alternatives.strip()),
+        has_external=has_external,
     )
+    evidence_sources = [s for s, ok in (("usuario", has_insights), ("web", has_external)) if ok]
     return {
         "dimensions": [
             {"key": d["key"], "label": d["label"], "weight": d["weight"], **dims[d["key"]]}
@@ -235,6 +242,7 @@ def build_rubric(
         ),
         "source": source,
         "ensemble_runs": 0,
+        "evidence_sources": evidence_sources,
     }
 
 
@@ -256,6 +264,7 @@ class RubricEvaluator(Protocol):
         alternatives: str | None = None,
         channel: str | None = None,
         insights_raw: str | None = None,
+        external_evidence: str | None = None,
     ) -> dict[str, Any]: ...
 
 
@@ -284,6 +293,7 @@ class HeuristicRubricEvaluator:
         alternatives: str | None = None,
         channel: str | None = None,
         insights_raw: str | None = None,
+        external_evidence: str | None = None,
     ) -> dict[str, Any]:
         half = 0.35
         dims_raw: dict[str, Any] = {}
@@ -315,6 +325,7 @@ class HeuristicRubricEvaluator:
             channel=channel,
             insights_raw=insights_raw,
             source=self.source,
+            external_evidence=external_evidence,
         )
 
 
@@ -337,6 +348,7 @@ def _build_prompt(
     alternatives: str | None,
     channel: str | None,
     insights_raw: str | None,
+    external_evidence: str | None = None,
 ) -> str:
     lines = [f"IDEA DE PRODUCTO: {idea}", f"PÚBLICO OBJETIVO: {target_audience}"]
     if price:
@@ -347,6 +359,11 @@ def _build_prompt(
         lines.append(f"CANAL PRINCIPAL: {channel}")
     if insights_raw:
         lines.append(f"INSIGHTS REALES (entrevistas, ventas, soporte, redes):\n{insights_raw}")
+    if external_evidence:
+        lines.append(
+            "EVIDENCIA EXTERNA (búsqueda web: competidores, precios, cómo se habla del "
+            f"problema; NO son citas de clientes de esta idea):\n{external_evidence}"
+        )
 
     dims_desc = "\n".join(f'- "{d["key"]}": {d["question"]}' for d in DIMENSIONS)
     return (
@@ -360,7 +377,8 @@ def _build_prompt(
         "respalden, puede ser estrecho.\n"
         '- "rationale": 1-2 frases concretas a ESTA idea y ESTA audiencia, no genéricas.\n'
         '- "is_hypothesis": false SOLO si la puntuación se apoya en los insights reales '
-        "aportados; true en cualquier otro caso.\n\n"
+        "aportados o en la evidencia externa; true en cualquier otro caso. Cuando uses la "
+        "evidencia externa, cítala en rationale (p. ej. 'hay 4 competidores cobrando $9-29/mes').\n\n"
         'Además devuelve "key_assumptions": las 3-5 suposiciones que TIENEN que ser '
         "ciertas para que la idea funcione (formuladas como afirmaciones comprobables).\n\n"
         "Reglas:\n"
@@ -399,8 +417,11 @@ class ClaudeRubricEvaluator:
         alternatives: str | None = None,
         channel: str | None = None,
         insights_raw: str | None = None,
+        external_evidence: str | None = None,
     ) -> dict[str, Any]:
-        prompt = _build_prompt(idea, target_audience, price, alternatives, channel, insights_raw)
+        prompt = _build_prompt(
+            idea, target_audience, price, alternatives, channel, insights_raw, external_evidence
+        )
         runs: list[dict[str, Any]] = []
         for i in range(ENSEMBLE_N):
             try:
@@ -425,6 +446,7 @@ class ClaudeRubricEvaluator:
                 channel=channel,
                 insights_raw=insights_raw,
                 source=self.source,
+                external_evidence=external_evidence,
             )
             rubric["ensemble_runs"] = len(runs)
             return rubric
@@ -437,6 +459,7 @@ class ClaudeRubricEvaluator:
                 alternatives=alternatives,
                 channel=channel,
                 insights_raw=insights_raw,
+                external_evidence=external_evidence,
             )
 
 
