@@ -105,9 +105,23 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
         from app.llm.profiles import get_profile_generator
 
         generator = get_profile_generator()
-        insights = generator.explain_objections(
-            request.idea, full.get("top_objections", []), full
+        # Fase 1.4: los insights se basan en el panel (objeciones reales al
+        # producto) y en la adopción del v2, no en las etiquetas fijas del v1.
+        panel_obj = (full.get("panel") or {}).get("objections") or []
+        objections_src = (
+            [{"objection": o["label"], "frequency": o["share"]} for o in panel_obj]
+            or full.get("top_objections", [])
         )
+        v2 = full.get("v2")
+        metrics_src = (
+            {
+                "acceptance_rate": {"mean": v2["adoption"]["p50"]},
+                "purchase_intent_probability": {"mean": v2["purchase_intent"]["p50"]},
+            }
+            if v2
+            else full
+        )
+        insights = generator.explain_objections(request.idea, objections_src, metrics_src)
     except Exception:  # noqa: BLE001 - los insights son opcionales
         logger.exception("No se pudieron generar insights project=%s", project_id)
 

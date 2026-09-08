@@ -9,6 +9,7 @@ from app.llm.rubric import (
     build_rubric,
     derive_confidence,
     get_rubric_evaluator,
+    merge_rubric_runs,
     normalize_dimension,
     weighted_overall,
 )
@@ -74,3 +75,55 @@ def test_build_rubric_forces_hypothesis_without_insights():
     assert all(d["is_hypothesis"] for d in r["dimensions"])
     assert "Evidencia real" in r["missing_info"][0]
     assert len(r["missing_info"]) == 1
+
+
+def test_merge_rubric_runs_takes_medians_and_any_hypothesis():
+    def run(score, hyp, note):
+        return {
+            "dimensions": {k: {"score": score, "low": score - 0.1, "high": score + 0.1,
+                               "rationale": note, "is_hypothesis": hyp} for k in DIMENSION_KEYS},
+            "key_assumptions": [f"a-{note}", "común"],
+        }
+    merged = merge_rubric_runs([run(0.3, False, "baja"), run(0.5, False, "media"), run(0.9, True, "alta")])
+    d = merged["dimensions"]["problem_severity"]
+    assert d["score"] == pytest.approx(0.5)
+    assert d["low"] == pytest.approx(0.4) and d["high"] == pytest.approx(0.6)
+    assert d["rationale"] == "media"  # la corrida más cercana a la mediana
+    assert d["is_hypothesis"] is True  # basta con que una lo marque
+    assert merged["key_assumptions"] == ["a-baja", "común", "a-media", "a-alta"]
+    single = run(0.7, False, "x")
+    assert merge_rubric_runs([single]) is single
+
+
+def test_claude_evaluator_ensemble_uses_median(monkeypatch):
+    from app.llm import rubric as mod
+
+    class FakeClient:
+        def __init__(self):
+            self.calls = 0
+
+        def complete_json(self, system, prompt, **kw):
+            self.calls += 1
+            score = [0.2, 0.6, 0.9][(self.calls - 1) % 3]
+            return {
+                "dimensions": {k: {"score": score, "low": 0.1, "high": 0.95} for k in DIMENSION_KEYS},
+                "key_assumptions": ["x"],
+            }
+
+    monkeypatch.setattr(mod, "ENSEMBLE_N", 3)
+    fake = FakeClient()
+    r = mod.ClaudeRubricEvaluator(client=fake).evaluate("Una idea de producto", "audiencia")
+    assert fake.calls == 3 and r["ensemble_runs"] == 3 and r["source"] == "claude"
+    assert r["dimensions"][0]["score"] == pytest.approx(0.6)
+
+
+def test_claude_evaluator_falls_back_when_all_runs_fail(monkeypatch):
+    from app.llm import rubric as mod
+
+    class Broken:
+        def complete_json(self, *a, **k):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(mod, "ENSEMBLE_N", 2)
+    r = mod.ClaudeRubricEvaluator(client=Broken()).evaluate("Una idea de producto", "audiencia")
+    assert r["source"] == "heuristic" and r["ensemble_runs"] == 0

@@ -144,7 +144,39 @@ export function exportProjectReportPDF(project) {
   // 2) Validación de mercado (simulación más reciente)
   const sim = (project.simulations || [])[0];
   w.text('2. Validación de mercado (MVP Validator)', { size: 14, style: 'bold', gap: 4 });
-  if (sim?.results) {
+  if (sim?.results?.v2) {
+    // Fase 1.4: informe sobre la rúbrica + Monte Carlo v2 + panel (sin "IC 95%" del v1).
+    const r = sim.results;
+    const ad = r.v2.adoption || {};
+    const buy = r.v2.purchase_intent || {};
+    if (r.rubric) {
+      w.text(`Puntuación de la idea: ${pct(r.rubric.overall?.score)}  (rango plausible ${pct(r.rubric.overall?.low)} – ${pct(r.rubric.overall?.high)})  ·  confianza ${r.rubric.confidence}`, { size: 11, style: 'bold' });
+    }
+    w.text(`Adopción estimada: ${pct(ad.p50)}  (plausible ${pct(ad.p5)} – ${pct(ad.p95)})`, { size: 11, style: 'bold' });
+    w.text(`Intención de compra: ${pct(buy.p50)}  (plausible ${pct(buy.p5)} – ${pct(buy.p95)})`, { size: 11, style: 'bold', gap: 4 });
+    w.text('El rango refleja la incertidumbre declarada en la evaluación: cuanto más ancho, más hipótesis y menos evidencia.', { size: 9, style: 'italic', color: [110, 110, 120] });
+    if ((r.rubric?.dimensions || []).length) {
+      w.text('Rúbrica:', { size: 11, style: 'bold' });
+      r.rubric.dimensions.forEach((d) =>
+        w.text(`• ${d.label}: ${pct(d.score)} (${pct(d.low)} – ${pct(d.high)})${d.is_hypothesis ? ' · hipótesis' : ''}`, { size: 10, color: [60, 60, 70] }));
+    }
+    if ((r.panel?.objections || []).length) {
+      w.text('Objeciones dominantes (panel de clientes simulados):', { size: 11, style: 'bold' });
+      r.panel.objections.forEach((o) =>
+        w.text(`• ${o.label}: ${pct(o.share)}`, { size: 10, color: [60, 60, 70] }));
+    }
+    if ((r.v2.sensitivity || []).length) {
+      w.text('Qué validar primero (la duda que más mueve el resultado):', { size: 11, style: 'bold' });
+      r.v2.sensitivity.slice(0, 3).forEach((x) =>
+        w.text(`• ${x.label}: ${pct(x.importance)}`, { size: 10, color: [60, 60, 70] }));
+    }
+    if ((r.rubric?.key_assumptions || []).length) {
+      w.text('Debe ser cierto para que funcione:', { size: 11, style: 'bold' });
+      r.rubric.key_assumptions.forEach((a) => w.text(`• ${a}`, { size: 10, color: [60, 60, 70] }));
+    }
+    if (sim.insights?.summary) w.text(`Insight: ${sim.insights.summary}`, { size: 10, style: 'italic', color: [60, 60, 70] });
+    w.text(`Motor: ${sim.audience_source === 'claude' && r.rubric?.source === 'claude' ? 'IA (Claude)' : 'parcialmente heurístico — no evalúa la idea'}`, { size: 9, color: [130, 130, 140] });
+  } else if (sim?.results) {
     const r = sim.results;
     const acc = r.acceptance_rate || {};
     const buy = r.purchase_intent_probability || {};

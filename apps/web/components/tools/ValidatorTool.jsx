@@ -363,16 +363,41 @@ export default function ValidatorTool({ projectId = null }) {
 
       {result && !loading && (
         <div>
-          <div className="row" style={{ marginBottom: 12 }}>
-            <h2 style={{ margin: 0 }}>Resultado de la simulación</h2>
-            <span className="tag gray">{result.audience_source === 'claude' ? 'IA (Claude)' : 'Heurístico'}</span>
+          {/* Fase 1.4 — transparencia: confianza siempre visible y aviso claro
+              cuando alguna pieza corrió sin IA (plantillas, no evaluación). */}
+          {(() => {
+            const heur = [
+              result.audience_source !== 'claude' && 'arquetipos',
+              result.rubric?.source === 'heuristic' && 'rúbrica',
+              result.panel?.source === 'heuristic' && 'panel de clientes',
+            ].filter(Boolean);
+            return heur.length > 0 && (
+              <div className="banner err" style={{ marginBottom: 12 }}>
+                ⚠️ <b>Motor de IA no disponible</b> para: {heur.join(', ')}. Esas partes son plantillas genéricas y <b>no evalúan tu idea</b>. Revisa la clave de API del validator antes de tomar decisiones con este resultado.
+              </div>
+            );
+          })()}
+          <div className="row" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0 }}>Resultado de la pre-validación</h2>
+            <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {result.rubric && <span className={`tag ${CONFIDENCE_TAG[result.rubric.confidence] || 'gray'}`}>confianza {result.rubric.confidence}</span>}
+              {result.rubric?.ensemble_runs > 1 && <span className="tag gray">mediana de {result.rubric.ensemble_runs} evaluaciones</span>}
+              <span className="tag gray">{result.audience_source === 'claude' ? 'IA (Claude)' : 'Heurístico'}</span>
+            </span>
           </div>
+          {result.rubric && result.v2 && (
+            <p style={{ margin: '0 0 14px', fontSize: 14.5, lineHeight: 1.6 }}>
+              Puntuación de la idea <b>{pct0(result.rubric.overall?.score ?? 0)}</b> con confianza <b>{result.rubric.confidence}</b>; adopción estimada <b>{pct0(result.v2.adoption?.p50 ?? 0)}</b> (plausible {pct0(result.v2.adoption?.p5 ?? 0)}–{pct0(result.v2.adoption?.p95 ?? 0)}).
+              {result.rubric.confidence === 'baja' && ' Con confianza baja, trata estas cifras como hipótesis a validar, no como predicción.'}
+            </p>
+          )}
 
           <RubricCard rubric={result.rubric} />
           <SimulationV2Card v2={result.v2} />
           <PanelCard panel={result.panel} />
 
-          <div className="card" style={{ marginBottom: 14 }}>
+          {/* Gauges v1 con "IC 95%": solo si no hay v2 (el IC medía ruido de muestreo, no incertidumbre real). */}
+          {!result.v2 && <div className="card" style={{ marginBottom: 14 }}>
             <div style={{ display: 'flex', gap: 30, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Gauge value={result.acceptance_rate?.mean ?? 0} label="Aceptación de mercado" />
               <Gauge value={result.purchase_intent_probability?.mean ?? 0} label="Intención de compra" />
@@ -380,7 +405,7 @@ export default function ValidatorTool({ projectId = null }) {
             <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 12, margin: '8px 0 0' }}>
               IC 95%: aceptación [{pct(result.acceptance_rate?.ci_95_lower ?? 0)} – {pct(result.acceptance_rate?.ci_95_upper ?? 0)}]
             </p>
-          </div>
+          </div>}
 
           <div className="grid cols-2">
             {!result.panel?.responses?.length && <div className="card">

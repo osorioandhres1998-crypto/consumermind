@@ -58,11 +58,23 @@ function buildProjectContext(project, { snapshots = [], experiments = [] } = {})
     },
     metricas_mensuales: metricas_mensuales.length ? metricas_mensuales : null,
     experimentos_ab: experimentos.length ? experimentos : null,
-    validacion_mercado: sim ? {
+    validacion_mercado: sim ? (sim.results?.v2 ? {
+      // Fase 1.4: el copiloto razona sobre la rúbrica, el Monte Carlo v2 y el
+      // panel de clientes simulados (no sobre las métricas v1 con IC falso).
+      puntuacion_idea: sim.results.rubric?.overall,
+      confianza: sim.results.rubric?.confidence,
+      rubrica: (sim.results.rubric?.dimensions || []).map((d) => ({ dimension: d.label, score: d.score, rango: [d.low, d.high], hipotesis: d.is_hypothesis })),
+      supuestos_clave: sim.results.rubric?.key_assumptions,
+      adopcion_estimada: sim.results.v2.adoption,
+      intencion_compra: sim.results.v2.purchase_intent,
+      que_validar_primero: (sim.results.v2.sensitivity || []).slice(0, 3).map((x) => x.label),
+      objeciones_panel: (sim.results.panel?.objections || []).map((o) => ({ objecion: o.label, peso: o.share, citas: o.quotes })),
+      intencion_panel: sim.results.panel?.intent_mean,
+    } : {
       aceptacion_mercado: sim.results?.acceptance_rate,
       intencion_compra: sim.results?.purchase_intent_probability,
       principales_objeciones: sim.results?.top_objections,
-    } : null,
+    }) : null,
     sesgos_psicologicos: strategy ? {
       probabilidad_conversion: strategy.result?.conversion_probability,
       sesgos: (strategy.result?.biases || []).map((b) => ({ nombre: b.name, intensidad: b.intensity, accion: b.action })),

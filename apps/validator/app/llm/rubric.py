@@ -13,6 +13,8 @@ fallback heurístico determinista (regla de oro: funciona sin red ni clave).
 
 from __future__ import annotations
 
+import os
+import statistics
 from typing import Any, Protocol, runtime_checkable
 
 from app.llm import client as llm_client
@@ -71,6 +73,11 @@ DIMENSION_KEYS = tuple(d["key"] for d in DIMENSIONS)
 _WEIGHTS = {d["key"]: float(d["weight"]) for d in DIMENSIONS}
 
 CONFIDENCE_LEVELS = ("baja", "media", "alta")
+
+#: Fase 1.4 — nº de corridas del LLM que se combinan por mediana. Una sola
+#: corrida a temperatura > 0 hace que la misma idea puntúe distinto cada vez;
+#: la mediana de 3 estabiliza sin disparar el coste.
+ENSEMBLE_N = max(1, int(os.getenv("RUBRIC_ENSEMBLE_N", "3")))
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +165,39 @@ def _missing_info(
     return missing
 
 
+def merge_rubric_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Combina varias corridas crudas del LLM en una sola (Fase 1.4).
+
+    Por dimensión: mediana de ``score``/``low``/``high``; la justificación se
+    toma de la corrida cuyo score quedó más cerca de la mediana (no se mezclan
+    textos); ``is_hypothesis`` es True si CUALQUIER corrida lo marcó así.
+    ``key_assumptions``: unión en orden, sin duplicados, hasta 6.
+    """
+    if not runs:
+        raise ValueError("Sin corridas que combinar.")
+    if len(runs) == 1:
+        return runs[0]
+    merged_dims: dict[str, Any] = {}
+    for k in DIMENSION_KEYS:
+        per_run = [normalize_dimension((r.get("dimensions") or {}).get(k)) for r in runs]
+        med_score = statistics.median(d["score"] for d in per_run)
+        closest = min(per_run, key=lambda d: abs(d["score"] - med_score))
+        merged_dims[k] = {
+            "score": med_score,
+            "low": statistics.median(d["low"] for d in per_run),
+            "high": statistics.median(d["high"] for d in per_run),
+            "rationale": closest["rationale"],
+            "is_hypothesis": any(d["is_hypothesis"] for d in per_run),
+        }
+    assumptions: list[str] = []
+    for r in runs:
+        for a in r.get("key_assumptions") or []:
+            a = str(a).strip()
+            if a and a not in assumptions:
+                assumptions.append(a)
+    return {"dimensions": merged_dims, "key_assumptions": assumptions[:6]}
+
+
 def build_rubric(
     dimensions_raw: dict[str, Any],
     *,
@@ -194,6 +234,7 @@ def build_rubric(
             price=price, alternatives=alternatives, channel=channel, insights_raw=insights_raw
         ),
         "source": source,
+        "ensemble_runs": 0,
     }
 
 
@@ -360,22 +401,35 @@ class ClaudeRubricEvaluator:
         insights_raw: str | None = None,
     ) -> dict[str, Any]:
         prompt = _build_prompt(idea, target_audience, price, alternatives, channel, insights_raw)
-        try:
-            data = self._client.complete_json(_SYSTEM, prompt, max_tokens=2500, temperature=0.2)
-            dims_raw = data.get("dimensions") if isinstance(data, dict) else None
-            if not isinstance(dims_raw, dict) or not dims_raw:
-                raise ValueError("Respuesta sin dimensiones.")
-            return build_rubric(
-                dims_raw,
-                key_assumptions=list(data.get("key_assumptions") or []),
+        runs: list[dict[str, Any]] = []
+        for i in range(ENSEMBLE_N):
+            try:
+                data = self._client.complete_json(
+                    _SYSTEM, prompt, max_tokens=2500, temperature=0.2
+                )
+                dims_raw = data.get("dimensions") if isinstance(data, dict) else None
+                if not isinstance(dims_raw, dict) or not dims_raw:
+                    raise ValueError("Respuesta sin dimensiones.")
+                runs.append(
+                    {"dimensions": dims_raw, "key_assumptions": list(data.get("key_assumptions") or [])}
+                )
+            except Exception as exc:  # noqa: BLE001 - una corrida fallida no tumba el ensemble
+                logger.warning("Corrida %d/%d de la rúbrica falló (%s).", i + 1, ENSEMBLE_N, exc)
+        if runs:
+            merged = merge_rubric_runs(runs)
+            rubric = build_rubric(
+                merged["dimensions"],
+                key_assumptions=merged["key_assumptions"],
                 price=price,
                 alternatives=alternatives,
                 channel=channel,
                 insights_raw=insights_raw,
                 source=self.source,
             )
-        except Exception as exc:  # noqa: BLE001 - fallback robusto
-            logger.warning("Fallo en la rúbrica con Claude (%s). Uso heurística.", exc)
+            rubric["ensemble_runs"] = len(runs)
+            return rubric
+        logger.warning("Todas las corridas de la rúbrica fallaron. Uso heurística.")
+        if True:
             return self._fallback.evaluate(
                 idea,
                 target_audience,

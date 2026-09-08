@@ -34,7 +34,11 @@ export default function ProjectReportPage() {
   const landing = (project.analyses || []).find((a) => a.module === 'landing');
 
   const sections = [
-    { icon: '🧪', name: 'MVP Validator', done: !!sim, detail: sim ? `Aceptación ${((sim.results?.acceptance_rate?.mean ?? 0) * 100).toFixed(1)}%` : 'Sin simulación' },
+    { icon: '🧪', name: 'MVP Validator', done: !!sim, detail: sim
+        ? (sim.results?.v2
+          ? `Adopción ${Math.round((sim.results.v2.adoption?.p50 ?? 0) * 100)}% (${Math.round((sim.results.v2.adoption?.p5 ?? 0) * 100)}–${Math.round((sim.results.v2.adoption?.p95 ?? 0) * 100)}%) · confianza ${sim.results.rubric?.confidence || 'n/d'}`
+          : `Aceptación ${((sim.results?.acceptance_rate?.mean ?? 0) * 100).toFixed(1)}%`)
+        : 'Sin simulación' },
     { icon: '🎯', name: 'Strategy', done: !!strat, detail: strat ? `${(strat.result?.biases || []).length} sesgos detectados` : 'Sin análisis' },
     { icon: '📊', name: 'Landing Analyzer', done: !!landing, detail: landing ? `Score ${landing.result?.score ?? '—'}/100 · ${landing.result?.ethics_alerts ?? 0} alertas` : 'Sin auditoría' },
     { icon: '✍️', name: 'Copy Studio', done: copies.length > 0, detail: copies.length ? `${copies.length} generación(es)` : 'Sin copy' },
