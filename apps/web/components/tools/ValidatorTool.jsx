@@ -19,7 +19,8 @@ const OBJECTION_LABELS = {
 };
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
 const pct0 = (v) => `${Math.round(v * 100)}%`;
-const EMPTY_FORM = { idea: '', target_audience: '', price: '', alternatives: '', channel: '', insights_raw: '' };
+const EMPTY_FORM = { idea: '', target_audience: '', price: '', alternatives: '', channel: '', insights_raw: '', vertical: '' };
+const VERTICAL_LABELS = { ecommerce: 'E-commerce', saas: 'SaaS', servicios: 'Servicios / Agencia' };
 const CONFIDENCE_TAG = { baja: 'red', media: 'amber', alta: 'green' };
 
 function Gauge({ value, label }) {
@@ -139,10 +140,16 @@ function SimulationV2Card({ v2 }) {
         <h3 style={{ margin: 0 }}>Adopción estimada</h3>
         <span className="tag">Monte Carlo v2 · {v2.execution_metrics?.n_iterations?.toLocaleString?.() || ''} escenarios</span>
       </div>
-      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>
+      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontSize: 13 }}>
         Cada escenario muestrea las dimensiones de la rúbrica dentro de su rango y simula la reacción de cada segmento con el precio propuesto.
         La banda es lo que no sabes todavía; la mediana, la estimación central.
       </p>
+      {v2.assumptions && (
+        <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--muted)' }}>
+          <span className="tag gray" style={{ marginRight: 6 }}>prior {pct0(v2.assumptions.prior_adoption_p0 ?? 0)} · {v2.assumptions.vertical_label || 'genérico'}</span>
+          {v2.assumptions.vertical_note}
+        </p>
+      )}
       <div className="grid cols-2">
         <div>
           <Band label="Adopción de la audiencia" s={v2.adoption} />
@@ -278,7 +285,7 @@ export default function ValidatorTool({ projectId = null }) {
     (async () => {
       try {
         const p = await getProject(projectId);
-        setForm({ ...EMPTY_FORM, idea: p.product || '', target_audience: p.customer || '', price: p.price || '', channel: p.channel || '' });
+        setForm({ ...EMPTY_FORM, idea: p.product || '', target_audience: p.customer || '', price: p.price || '', channel: p.channel || '', vertical: p.vertical || '' });
       } catch (e) {
         setError(e.message);
       } finally {
@@ -343,6 +350,13 @@ export default function ValidatorTool({ projectId = null }) {
               <label>Canal principal</label>
               <input value={form.channel} onChange={set('channel')} placeholder="Instagram Ads, SEO, ventas directas…" />
             </div>
+          </div>
+          <div className="field">
+            <label>Tipo de negocio (ajusta el prior de adopción)</label>
+            <select value={form.vertical} onChange={set('vertical')}>
+              <option value="">Genérico — sin vertical</option>
+              {Object.entries(VERTICAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
           </div>
           <div className="field">
             <label>¿Cómo resuelve hoy el problema tu audiencia?</label>

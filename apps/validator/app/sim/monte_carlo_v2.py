@@ -42,17 +42,15 @@ from typing import Any
 import numpy as np
 
 from app.llm.rubric import DIMENSIONS
+from app.sim.priors import resolve_prior
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 # --- Supuestos del modelo (explícitos y ajustables) ---------------------------
-#: Prior de adopción para una idea "neutra" (U = 0.5). Fase 2.1 → por vertical.
-P0 = 0.20
-#: Pendiente rúbrica → adopción (U=1 ⇒ ~0.65, U=0 ⇒ ~0.03 con P0=0.2).
-K = 4.0
-#: Escala del efecto del precio en el logit (sens≈1 y carga=1 ⇒ −1.5 logits).
-PRICE_K = 1.5
+#: P0 (prior de adopción de una idea neutra), K (pendiente rúbrica → adopción)
+#: y PRICE_K (peso del precio en el logit) se resuelven POR VERTICAL en
+#: ``app.sim.priors`` (Fase 2.1). Sin vertical: P0=0.20, K=4.0, PRICE_K=1.5.
 #: Cambio de carga de precio por cada duplicación del precio (elasticidad).
 PRICE_LOAD_PER_DOUBLING = 0.35
 #: Multiplicadores para la curva precio-adopción.
@@ -131,10 +129,13 @@ def run_simulation_v2(
     archetypes: list[dict[str, Any]] | None,
     *,
     price: str | None = None,
+    vertical: str | None = None,
     n_iterations: int = 10000,
     random_seed: int | None = 42,
 ) -> dict[str, Any]:
     """Ejecuta el Monte Carlo v2 y devuelve la distribución de resultados."""
+    prior = resolve_prior(vertical)
+    P0, K, PRICE_K = float(prior["p0"]), float(prior["k"]), float(prior["price_k"])
     if n_iterations <= 0:
         raise ValueError("n_iterations debe ser positivo.")
     dims = {d["key"]: d for d in rubric.get("dimensions", [])}
@@ -249,6 +250,9 @@ def run_simulation_v2(
         "price_value": price_value,
         "sensitivity": sensitivity,
         "assumptions": {
+            "vertical": prior["vertical"],
+            "vertical_label": prior["label"],
+            "vertical_note": prior["note"],
             "prior_adoption_p0": P0,
             "rubric_slope_k": K,
             "price_k": PRICE_K,

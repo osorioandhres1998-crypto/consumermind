@@ -89,6 +89,9 @@ class IdeaAnalysisRequest(BaseModel):
         None, description="Cómo resuelve hoy el problema la audiencia."
     )
     channel: str | None = Field(None, description="Canal principal de adquisición.")
+    vertical: str | None = Field(
+        None, description="ecommerce | saas | servicios (Fase 2.1: prior de adopción)."
+    )
     insights_raw: str | None = Field(
         None, description="Evidencia real: entrevistas, ventas, soporte, redes."
     )

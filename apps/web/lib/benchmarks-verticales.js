@@ -9,6 +9,10 @@
  * por ciclo de ventas y modelo de ingresos), pensados para calibrarse
  * con cohortes reales del cliente. Fallback: sin vertical, se usan las
  * bandas genéricas existentes (comportamiento sin cambios).
+ *
+ * Los PRIORS DE ADOPCIÓN por vertical que usa el MVP Validator (Monte Carlo
+ * v2) viven en apps/validator/app/sim/priors.py — misma filosofía, mismas
+ * claves (ecommerce | saas | servicios). Mantener ambas tablas alineadas.
  */
 
 export const VERTICALS = {

@@ -79,6 +79,7 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
                 full["rubric"],
                 plan.get("archetypes", []),
                 price=request.price,
+                vertical=request.vertical,
                 n_iterations=int(plan["config"].get("n_iterations", 10000)),
                 random_seed=plan["config"].get("random_seed", 42),
             )
