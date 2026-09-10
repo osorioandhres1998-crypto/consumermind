@@ -77,3 +77,66 @@ def save_simulation(
             sim_id = cur.fetchone()[0]
         conn.commit()
     return str(sim_id)
+
+
+# ---------------------------------------------------------------------------
+# Fase 4 — resultados reales y calibración por vertical
+# ---------------------------------------------------------------------------
+
+
+def save_outcome(
+    *,
+    workspace_id: str,
+    user_id: str | None,
+    project_id: str | None,
+    simulation_id: str | None,
+    vertical: str | None,
+    experiment_key: str,
+    observed_rate: float | None,
+    estimated_rate: float | None,
+    success: bool | None,
+    note: str | None,
+) -> str:
+    """Registra el resultado real de un experimento (RLS por transacción)."""
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT set_config('app.workspace_id', %s, true)", (workspace_id,))
+            cur.execute(
+                """
+                INSERT INTO validation_outcomes
+                    (workspace_id, project_id, simulation_id, created_by, vertical,
+                     experiment_key, observed_rate, estimated_rate, success, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (workspace_id, project_id, simulation_id, user_id, vertical,
+                 experiment_key, observed_rate, estimated_rate, success, note),
+            )
+            out_id = cur.fetchone()[0]
+        conn.commit()
+    return str(out_id)
+
+
+def calibration_for(workspace_id: str, vertical: str | None) -> dict[str, Any] | None:
+    """Resumen de resultados reales del workspace para ese vertical.
+
+    Solo cuentan experimentos con tasa observada (smoke test, fake door,
+    test de canal): son los comparables con la adopción estimada.
+    """
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT set_config('app.workspace_id', %s, true)", (workspace_id,))
+            cur.execute(
+                """
+                SELECT count(*), avg(observed_rate), avg(observed_rate - estimated_rate)
+                  FROM validation_outcomes
+                 WHERE workspace_id = %s
+                   AND coalesce(vertical, '') = coalesce(%s, '')
+                   AND observed_rate IS NOT NULL
+                """,
+                (workspace_id, vertical),
+            )
+            n, observed_mean, mean_error = cur.fetchone()
+    if not n:
+        return None
+    return {"n": int(n), "observed_mean": float(observed_mean), "mean_error": float(mean_error or 0.0)}

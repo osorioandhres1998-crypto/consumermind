@@ -130,11 +130,12 @@ def run_simulation_v2(
     *,
     price: str | None = None,
     vertical: str | None = None,
+    calibration: dict[str, Any] | None = None,
     n_iterations: int = 10000,
     random_seed: int | None = 42,
 ) -> dict[str, Any]:
     """Ejecuta el Monte Carlo v2 y devuelve la distribución de resultados."""
-    prior = resolve_prior(vertical)
+    prior = resolve_prior(vertical, calibration)
     P0, K, PRICE_K = float(prior["p0"]), float(prior["k"]), float(prior["price_k"])
     if n_iterations <= 0:
         raise ValueError("n_iterations debe ser positivo.")
@@ -253,6 +254,7 @@ def run_simulation_v2(
             "vertical": prior["vertical"],
             "vertical_label": prior["label"],
             "vertical_note": prior["note"],
+            "calibrated_n": prior.get("calibrated_n", 0),
             "prior_adoption_p0": P0,
             "rubric_slope_k": K,
             "price_k": PRICE_K,

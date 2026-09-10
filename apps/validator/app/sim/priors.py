@@ -56,9 +56,31 @@ VERTICAL_PRIORS: dict[str, dict[str, Any]] = {
 }
 
 
-def resolve_prior(vertical: str | None) -> dict[str, Any]:
-    """Devuelve el prior del vertical (o el genérico), con la clave usada."""
+#: Fase 4 — peso del prior de referencia expresado en "observaciones equivalentes".
+#: Con 5 resultados reales, el dato del workspace ya pesa lo mismo que la tabla.
+PRIOR_PSEUDO_N = 5.0
+
+
+def resolve_prior(vertical: str | None, calibration: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Devuelve el prior del vertical (o el genérico), con la clave usada.
+
+    Fase 4: si hay ``calibration`` (``{"n", "observed_mean"}`` de resultados
+    reales del workspace), el prior se actualiza con una media ponderada
+    Beta-binomial: p0' = (N0·p0 + n·observado) / (N0 + n).
+    """
     key = str(vertical or "").strip().lower()
     if key not in VERTICAL_PRIORS:
         key = GENERIC_KEY
-    return {"vertical": key, **VERTICAL_PRIORS[key]}
+    prior = {"vertical": key, **VERTICAL_PRIORS[key], "calibrated_n": 0}
+    n = float((calibration or {}).get("n") or 0)
+    if n > 0:
+        obs = float(calibration["observed_mean"])
+        p0 = (PRIOR_PSEUDO_N * prior["p0"] + n * obs) / (PRIOR_PSEUDO_N + n)
+        prior["p0_reference"] = prior["p0"]
+        prior["p0"] = round(min(0.95, max(0.01, p0)), 4)
+        prior["calibrated_n"] = int(n)
+        prior["note"] = (
+            f"Prior calibrado con {int(n)} resultado(s) real(es) de tu workspace "
+            f"(media observada {obs:.0%}); referencia del vertical: {prior['p0_reference']:.0%}."
+        )
+    return prior

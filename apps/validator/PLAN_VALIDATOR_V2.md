@@ -36,8 +36,8 @@
 | 3.3 | Reposicionamiento de UI y copy: "Pre-validación de idea"; hipótesis marcadas; sin promesas de predicción. | ✅ |
 
 ### Fase 4 — Calibración con datos del workspace
-| 4.1 | Registrar resultado real (conversión del smoke test, pre-ventas) junto a la estimación → error de calibración por vertical. | ⬜ |
-| 4.2 | Ajustar priors por vertical con los datos acumulados (Bayes simple). | ⬜ |
+| 4.1 | Registrar resultado real (conversión del smoke test, pre-ventas) junto a la estimación → error de calibración por vertical. | ✅ |
+| 4.2 | Ajustar priors por vertical con los datos acumulados (Bayes simple). | ✅ |
 
 ## Reglas
 - Regla de oro del validator: **siempre existe fallback heurístico** (tests y CI sin red).

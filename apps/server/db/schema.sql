@@ -218,3 +218,27 @@ DROP POLICY IF EXISTS tenant_isolation ON experiments;
 CREATE POLICY tenant_isolation ON experiments
   USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
   WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+
+-- Fase 4 (Validator): resultado REAL de un experimento de validación, ligado a
+-- la estimación que se hizo. Alimenta la calibración de priors por vertical.
+CREATE TABLE IF NOT EXISTS validation_outcomes (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id   UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id     UUID REFERENCES projects(id) ON DELETE CASCADE,
+  simulation_id  UUID REFERENCES simulations(id) ON DELETE SET NULL,
+  created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
+  vertical       TEXT,
+  experiment_key TEXT NOT NULL,             -- interviews | smoke_landing | fake_door | ...
+  observed_rate  DOUBLE PRECISION,          -- tasa observada (0-1), p. ej. conversión del smoke test
+  estimated_rate DOUBLE PRECISION,          -- adopción p50 estimada en ese momento
+  success        BOOLEAN,
+  note           TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_validation_outcomes_ws ON validation_outcomes (workspace_id, vertical);
+ALTER TABLE validation_outcomes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE validation_outcomes FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON validation_outcomes;
+CREATE POLICY tenant_isolation ON validation_outcomes
+  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
+  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);

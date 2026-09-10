@@ -149,7 +149,7 @@ function SimulationV2Card({ v2 }) {
       </p>
       {v2.assumptions && (
         <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--muted)' }}>
-          <span className="tag gray" style={{ marginRight: 6 }}>prior {pct0(v2.assumptions.prior_adoption_p0 ?? 0)} · {v2.assumptions.vertical_label || 'genérico'}</span>
+          <span className="tag gray" style={{ marginRight: 6 }}>prior {pct0(v2.assumptions.prior_adoption_p0 ?? 0)} · {v2.assumptions.vertical_label || 'genérico'}{v2.assumptions.calibrated_n > 0 ? ` · calibrado (${v2.assumptions.calibrated_n})` : ''}</span>
           {v2.assumptions.vertical_note}
         </p>
       )}
@@ -394,7 +394,58 @@ function JtbdCard({ research }) {
 }
 
 /* Fase 3.1 — cómo validar de verdad: experimentos con métrica y umbral. */
-function ExperimentsCard({ plan, projectId }) {
+/* Fase 4 — registrar el resultado real y calibrar los priors del workspace. */
+function OutcomeForm({ projectId, result, experiments }) {
+  const [form, setForm] = useState({ experiment_key: experiments[0]?.key || 'smoke_landing', observed_pct: '', success: '' });
+  const [state, setState] = useState(null);
+  const submit = async (e) => {
+    e.preventDefault();
+    setState('saving');
+    try {
+      const r = await apiFetch(`/api/validator/projects/${projectId}/outcomes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          experiment_key: form.experiment_key,
+          observed_rate: form.observed_pct === '' ? null : Number(form.observed_pct) / 100,
+          estimated_rate: result.v2?.adoption?.p50 ?? null,
+          success: form.success === '' ? null : form.success === 'yes',
+          simulation_id: result.simulation_id || null,
+          vertical: result.v2?.assumptions?.vertical === 'generico' ? null : result.v2?.assumptions?.vertical,
+        }),
+      });
+      setState(r.calibration ? `ok:${r.calibration.n}` : 'ok:0');
+    } catch (err) {
+      setState('error');
+    }
+  };
+  return (
+    <form onSubmit={submit} style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>¿Ya corriste alguno? Registra el resultado real</div>
+      <div className="grid cols-2" style={{ gap: 10 }}>
+        <div className="field" style={{ marginBottom: 6 }}>
+          <label>Experimento</label>
+          <select value={form.experiment_key} onChange={(e) => setForm({ ...form, experiment_key: e.target.value })}>
+            {experiments.map((x) => <option key={x.key} value={x.key}>{x.name}</option>)}
+          </select>
+        </div>
+        <div className="field" style={{ marginBottom: 6 }}>
+          <label>Tasa observada (%)</label>
+          <input type="number" min="0" max="100" step="0.1" value={form.observed_pct} onChange={(e) => setForm({ ...form, observed_pct: e.target.value })} placeholder="p. ej. 4.2" />
+        </div>
+      </div>
+      <div className="row" style={{ justifyContent: 'flex-start', gap: 10 }}>
+        <select value={form.success} onChange={(e) => setForm({ ...form, success: e.target.value })} style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--line)', fontSize: 13 }}>
+          <option value="">¿Superó el umbral?</option><option value="yes">Sí</option><option value="no">No</option>
+        </select>
+        <button className="btn sm" type="submit" disabled={state === 'saving'}>{state === 'saving' ? 'Guardando…' : 'Guardar resultado'}</button>
+        {state?.startsWith('ok') && <span className="tag green">Guardado · prior calibrado con {state.split(':')[1]} resultado(s)</span>}
+        {state === 'error' && <span className="tag red">No se pudo guardar</span>}
+      </div>
+    </form>
+  );
+}
+
+function ExperimentsCard({ plan, projectId, result }) {
   const [saved, setSaved] = useState({});
   if (!plan || !(plan.experiments || []).length) return null;
   const register = async (e) => {
@@ -434,9 +485,10 @@ function ExperimentsCard({ plan, projectId }) {
       ))}
       {projectId && (
         <p style={{ margin: '10px 0 0', fontSize: 12.5, color: 'var(--muted)' }}>
-          Registra cada resultado en <Link href={`/projects/${projectId}/experiments`} style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Experimentos</Link> del proyecto y audita la landing con <Link href={`/projects/${projectId}/landing`} style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Landing Analyzer</Link>.
+          Registra cada experimento en <Link href={`/projects/${projectId}/experiments`} style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Experimentos</Link> del proyecto y audita la landing con <Link href={`/projects/${projectId}/landing`} style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Landing Analyzer</Link>.
         </p>
       )}
+      {projectId && <OutcomeForm projectId={projectId} result={result} experiments={plan.experiments} />}
     </div>
   );
 }
@@ -594,7 +646,7 @@ export default function ValidatorTool({ projectId = null }) {
           <JtbdCard research={result.audience_research} />
           <SimulationV2Card v2={result.v2} />
           <PanelCard panel={result.panel} />
-          <ExperimentsCard plan={result.experiments} projectId={projectId} />
+          <ExperimentsCard plan={result.experiments} projectId={projectId} result={result} />
 
           {/* Gauges v1 con "IC 95%": solo si no hay v2 (el IC medía ruido de muestreo, no incertidumbre real). */}
           {!result.v2 && <div className="card" style={{ marginBottom: 14 }}>

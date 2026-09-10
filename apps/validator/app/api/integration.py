@@ -9,9 +9,10 @@ consume el frontend Next.js unificado.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from app.auth.jwt import TenantContext, require_tenant
-from app.db import save_simulation, user_in_workspace
+from app.db import calibration_for, save_outcome, save_simulation, user_in_workspace
 from app.llm.audience_research import get_audience_researcher
 from app.llm.config_builder import build_simulation_plan
 from app.llm.demand_signals import get_demand_signals
@@ -106,12 +107,19 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
     # segmento, con el precio real. Convive con el v1 hasta que la UI lo
     # retire (Fase 1.4). Opcional: si falla, no rompe la respuesta.
     if full.get("rubric"):
+        # Fase 4: prior calibrado con resultados reales del workspace (si hay).
+        calibration = None
+        try:
+            calibration = calibration_for(tenant.workspace_id, request.vertical)
+        except Exception:  # noqa: BLE001 - sin DB no hay calibración, no rompe
+            logger.exception("No se pudo leer la calibración project=%s", project_id)
         try:
             full["v2"] = run_simulation_v2(
                 full["rubric"],
                 plan.get("archetypes", []),
                 price=request.price,
                 vertical=request.vertical,
+                calibration=calibration,
                 n_iterations=int(plan["config"].get("n_iterations", 10000)),
                 random_seed=plan["config"].get("random_seed", 42),
             )
@@ -213,3 +221,49 @@ def validate_standalone(
 ) -> dict:
     """Simulación 'rápida' sin proyecto (herramienta standalone del hub)."""
     return _run_and_store(request, tenant, None)
+
+
+# ---------------------------------------------------------------------------
+# Fase 4 — registrar el resultado real de un experimento
+# ---------------------------------------------------------------------------
+
+
+class OutcomeRequest(BaseModel):
+    experiment_key: str = Field(..., min_length=2, max_length=40)
+    observed_rate: float | None = Field(None, ge=0.0, le=1.0)
+    estimated_rate: float | None = Field(None, ge=0.0, le=1.0)
+    success: bool | None = None
+    simulation_id: str | None = None
+    vertical: str | None = None
+    note: str | None = Field(None, max_length=500)
+
+
+@router.post("/projects/{project_id}/outcomes")
+def record_outcome(
+    project_id: str,
+    request: OutcomeRequest,
+    tenant: TenantContext = Depends(require_tenant),
+) -> dict:
+    """Guarda un resultado real; a partir de ahí calibra los priors del workspace."""
+    try:
+        if not user_in_workspace(tenant.workspace_id, tenant.user_id):
+            raise HTTPException(status_code=401, detail="Tu acceso a este workspace fue revocado.")
+        out_id = save_outcome(
+            workspace_id=tenant.workspace_id,
+            user_id=tenant.user_id,
+            project_id=project_id,
+            simulation_id=request.simulation_id,
+            vertical=request.vertical,
+            experiment_key=request.experiment_key,
+            observed_rate=request.observed_rate,
+            estimated_rate=request.estimated_rate,
+            success=request.success,
+            note=request.note,
+        )
+        calibration = calibration_for(tenant.workspace_id, request.vertical)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("No se pudo guardar el resultado project=%s", project_id)
+        raise HTTPException(status_code=503, detail=f"No se pudo guardar: {exc}")
+    return {"outcome_id": out_id, "calibration": calibration}
