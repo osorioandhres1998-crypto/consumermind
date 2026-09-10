@@ -17,6 +17,7 @@ from app.llm.config_builder import build_simulation_plan
 from app.llm.demand_signals import get_demand_signals
 from app.llm.personas import get_persona_panel
 from app.llm.rubric import get_rubric_evaluator
+from app.sim.experiments import recommend_experiments
 from app.sim.monte_carlo_v2 import run_simulation_v2
 from app.models.schemas import IdeaAnalysisRequest
 from app.sim.monte_carlo import run_simulation
@@ -130,6 +131,15 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
         )
     except Exception:  # noqa: BLE001
         logger.exception("Falló el panel de personas project=%s", project_id)
+
+    # Fase 3.1 — experimentos recomendados (determinista, sin LLM).
+    try:
+        full["experiments"] = recommend_experiments(
+            full.get("rubric"), full.get("v2"), full.get("panel"),
+            has_price=bool(request.price and request.price.strip()),
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Falló el recomendador de experimentos project=%s", project_id)
 
     # Insights en lenguaje natural (Claude si hay clave; si no, heurística).
     insights = None

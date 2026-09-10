@@ -393,6 +393,34 @@ function JtbdCard({ research }) {
   );
 }
 
+/* Fase 3.1 — cómo validar de verdad: experimentos con métrica y umbral. */
+function ExperimentsCard({ plan, projectId }) {
+  if (!plan || !(plan.experiments || []).length) return null;
+  return (
+    <div className="card" style={{ marginBottom: 14, borderLeft: '3px solid var(--indigo)' }}>
+      <h3 style={{ margin: '0 0 4px' }}>Cómo validarlo de verdad</h3>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 13 }}>{plan.sequence_note}</p>
+      {plan.experiments.map((e) => (
+        <div key={e.key} style={{ display: 'flex', gap: 12, padding: '10px 0', borderTop: '1px solid var(--line)' }}>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--indigo)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{e.priority}</div>
+          <div style={{ fontSize: 13 }}>
+            <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}><b style={{ fontSize: 14 }}>{e.name}</b><span className="tag gray">{e.effort}</span></div>
+            <p style={{ margin: '4px 0', color: 'var(--muted)' }}>{e.reason}</p>
+            <p style={{ margin: '4px 0' }}><b>Cómo:</b> {e.how}</p>
+            <p style={{ margin: '4px 0' }}><b>Métrica:</b> {e.metric}</p>
+            <p style={{ margin: '4px 0' }}><b>Éxito si:</b> <span className="tag green">{e.threshold}</span></p>
+          </div>
+        </div>
+      ))}
+      {projectId && (
+        <p style={{ margin: '10px 0 0', fontSize: 12.5, color: 'var(--muted)' }}>
+          Registra cada resultado en <Link href={`/projects/${projectId}/experiments`} style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Experimentos</Link> del proyecto y audita la landing con <Link href={`/projects/${projectId}/landing`} style={{ color: 'var(--indigo-600)', fontWeight: 600 }}>Landing Analyzer</Link>.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Bar({ label, value, max = 1, color = 'var(--indigo)' }) {
   const w = max ? Math.max(2, (value / max) * 100) : 0;
   return (
@@ -546,6 +574,7 @@ export default function ValidatorTool({ projectId = null }) {
           <JtbdCard research={result.audience_research} />
           <SimulationV2Card v2={result.v2} />
           <PanelCard panel={result.panel} />
+          <ExperimentsCard plan={result.experiments} projectId={projectId} />
 
           {/* Gauges v1 con "IC 95%": solo si no hay v2 (el IC medía ruido de muestreo, no incertidumbre real). */}
           {!result.v2 && <div className="card" style={{ marginBottom: 14 }}>
