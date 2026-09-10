@@ -216,12 +216,25 @@ def _build_prompt(
     if channel:
         lines.append(f"DÓNDE VERÍAN LA PROPUESTA: {channel}")
 
-    personas = "\n".join(
-        f"{i + 1}. {a.get('name', 'Persona')} — {a.get('description', '')} "
-        f"(sensibilidad al precio {a.get('price_sensitivity', 1.0)}/3; "
-        f"le importa: {', '.join(map(str, a.get('key_drivers', []))) or 'n/d'})"
-        for i, a in enumerate(archetypes)
-    )
+    def _persona_line(i: int, a: dict[str, Any]) -> str:
+        line = (
+            f"{i + 1}. {a.get('name', 'Persona')} — {a.get('description', '')} "
+            f"(sensibilidad al precio {a.get('price_sensitivity', 1.0)}/3; "
+            f"le importa: {', '.join(map(str, a.get('key_drivers', []))) or 'n/d'})"
+        )
+        j = a.get("jtbd") or {}
+        if j:  # Fase 2.3: contexto JTBD para que la persona responda desde su situación real
+            bits = [
+                f"situación: {j['trigger_situation']}" if j.get("trigger_situation") else "",
+                f"dolor: {j['main_pain']}" if j.get("main_pain") else "",
+                f"desea: {j['main_desire']}" if j.get("main_desire") else "",
+                f"job emocional: {j['job_emotional']}" if j.get("job_emotional") else "",
+                f"suele preguntar: {j['sales_questions']}" if j.get("sales_questions") else "",
+            ]
+            line += "\n   JTBD → " + "; ".join(b for b in bits if b)
+        return line
+
+    personas = "\n".join(_persona_line(i, a) for i, a in enumerate(archetypes))
     cats = "\n".join(f'- "{k}": {v}' for k, v in OBJECTION_CATEGORIES.items())
     return (
         "\n".join(lines)

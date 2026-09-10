@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.jwt import TenantContext, require_tenant
 from app.db import save_simulation, user_in_workspace
+from app.llm.audience_research import get_audience_researcher
 from app.llm.config_builder import build_simulation_plan
 from app.llm.demand_signals import get_demand_signals
 from app.llm.personas import get_persona_panel
@@ -41,11 +42,26 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
         raise HTTPException(status_code=503, detail="No se pudo verificar tu acceso. Intenta de nuevo.")
 
     overrides = request.simulation.model_dump() if request.simulation else None
+
+    # Fase 2.3 — Audience Research (JTBD) como paso previo: los segmentos de
+    # demanda generan los arquetipos (uno por segmento) y dan contexto al
+    # panel de personas. Opcional: si falla, los arquetipos se generan como antes.
+    research = None
+    try:
+        research = get_audience_researcher().research(
+            product=request.idea,
+            audience_hint=request.target_audience,
+            insights_raw=request.insights_raw,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Falló Audience Research project=%s", project_id)
+
     plan = build_simulation_plan(
         idea=request.idea,
         target_audience=request.target_audience,
         n_archetypes=request.n_archetypes,
         simulation_overrides=overrides,
+        segments=(research or {}).get("segments"),
     )
 
     try:
@@ -55,6 +71,8 @@ def _run_and_store(request: IdeaAnalysisRequest, tenant: TenantContext, project_
         raise HTTPException(status_code=502, detail=f"La simulación falló: {exc}")
 
     full.pop("raw_samples", None)  # no persistimos las muestras crudas aquí
+    if research:
+        full["audience_research"] = research
 
     # Fase 2.2 — señales de demanda externas (Bright Data + Claude). Opcional:
     # sin token degrada a source="none" y la rúbrica sigue sin evidencia web.

@@ -62,6 +62,7 @@ def build_simulation_plan(
     n_archetypes: int = 8,
     simulation_overrides: dict[str, Any] | None = None,
     generator: ProfileGenerator | None = None,
+    segments: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Construye el plan completo: arquetipos + configuración de simulación.
 
@@ -71,7 +72,8 @@ def build_simulation_plan(
         ``{"config": {...}, "archetypes": [...], "source": "claude"|"heuristic"}``.
     """
     generator = generator or get_profile_generator()
-    archetypes = generator.generate_profiles(idea, target_audience, n_archetypes)
+    # Fase 2.3: con segmentos JTBD, un arquetipo por segmento (ignora n_archetypes).
+    archetypes = generator.generate_profiles(idea, target_audience, n_archetypes, segments or None)
     aggregated = aggregate_archetypes(archetypes)
 
     config: dict[str, Any] = {

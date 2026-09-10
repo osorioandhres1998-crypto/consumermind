@@ -337,6 +337,62 @@ function SignalsCard({ signals }) {
   );
 }
 
+/* Fase 2.3 — Audience Research (JTBD): los segmentos de demanda que generan
+   los arquetipos. Tabla comparativa: una columna por segmento. */
+const JTBD_ROWS = [
+  ['trigger_situation', 'Situación gatillo'],
+  ['trigger_event', 'Evento detonante'],
+  ['best_timing', 'Mejor momento'],
+  ['job_functional', 'Job funcional'],
+  ['job_emotional', 'Job emocional'],
+  ['job_social', 'Job social'],
+  ['main_pain', 'Dolor principal'],
+  ['main_desire', 'Deseo principal'],
+  ['sales_questions', 'Preguntas de venta'],
+  ['evidence', 'Evidencia'],
+];
+
+function JtbdCard({ research }) {
+  if (!research || !(research.segments || []).length) return null;
+  const segs = research.segments;
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 4 }}>
+        <h3 style={{ margin: 0 }}>Segmentos de demanda (Jobs-to-be-Done)</h3>
+        <span className="tag gray">{research.source === 'claude' ? 'IA (Claude)' : 'Plantilla sin IA'}</span>
+      </div>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 13 }}>
+        {research.summary} Cada segmento genera un arquetipo del panel: la simulación y las personas responden desde estas situaciones.
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12.5, minWidth: 520 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--line)', color: 'var(--muted)', fontWeight: 600 }}></th>
+              {segs.map((s, i) => (
+                <th key={i} style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--line)', verticalAlign: 'top' }}>
+                  {s.segment}
+                  {s.is_hypothesis && <div><span className="tag gray" style={{ marginTop: 4 }}>hipótesis</span></div>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {JTBD_ROWS.map(([key, label]) => (
+              <tr key={key}>
+                <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--line)', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{label}</td>
+                {segs.map((s, i) => (
+                  <td key={i} style={{ padding: '6px 8px', borderBottom: '1px solid var(--line)', verticalAlign: 'top', fontStyle: key === 'evidence' ? 'italic' : 'normal' }}>{s[key] || '—'}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function Bar({ label, value, max = 1, color = 'var(--indigo)' }) {
   const w = max ? Math.max(2, (value / max) * 100) : 0;
   return (
@@ -487,6 +543,7 @@ export default function ValidatorTool({ projectId = null }) {
 
           <SignalsCard signals={result.signals} />
           <RubricCard rubric={result.rubric} />
+          <JtbdCard research={result.audience_research} />
           <SimulationV2Card v2={result.v2} />
           <PanelCard panel={result.panel} />
 
@@ -523,7 +580,9 @@ export default function ValidatorTool({ projectId = null }) {
                 {result.archetypes.map((a, i) => (
                   <div key={i} className="card" style={{ boxShadow: 'none' }}>
                     <b>{a.name || a.segment || `Arquetipo ${i + 1}`}</b>
+                    {a.jtbd_segment && <span className="tag" style={{ marginLeft: 6 }}>JTBD</span>}
                     {a.description && <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--muted)' }}>{a.description}</p>}
+                    {a.jtbd?.trigger_situation && <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--muted)' }}><b>Cuando:</b> {a.jtbd.trigger_situation}</p>}
                     {typeof a.segment_share === 'number' && (
                       <span className="tag gray" style={{ marginTop: 6 }}>{pct(a.segment_share)} del mercado</span>
                     )}

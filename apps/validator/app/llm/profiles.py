@@ -100,6 +100,22 @@ _OBJECTION_RECOMMENDATIONS = {
 }
 
 
+#: Campos JTBD que viajan con el arquetipo (Fase 2.3) para dar contexto al
+#: panel de personas sin arrastrar todo el segmento.
+JTBD_FIELDS = (
+    "trigger_situation", "trigger_event", "job_functional", "job_emotional",
+    "job_social", "main_pain", "main_desire", "sales_questions", "is_hypothesis", "evidence",
+)
+
+
+def jtbd_link(segment: dict[str, Any]) -> dict[str, Any]:
+    """Devuelve el enlace de un arquetipo con su segmento JTBD."""
+    return {
+        "jtbd_segment": segment.get("segment", ""),
+        "jtbd": {k: segment.get(k) for k in JTBD_FIELDS if segment.get(k) is not None},
+    }
+
+
 @runtime_checkable
 class ProfileGenerator(Protocol):
     """Contrato para generadores de perfiles de audiencia."""
@@ -107,9 +123,19 @@ class ProfileGenerator(Protocol):
     source: str
 
     def generate_profiles(
-        self, idea: str, target_audience: str, n_profiles: int
+        self,
+        idea: str,
+        target_audience: str,
+        n_profiles: int,
+        segments: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
-        """Devuelve una lista de arquetipos de audiencia (perfiles agregados)."""
+        """Devuelve una lista de arquetipos de audiencia (perfiles agregados).
+
+        Fase 2.3: si se pasan ``segments`` (Audience Research / JTBD), cada
+        arquetipo se construye SOBRE un segmento (uno por segmento) y conserva
+        el enlace en ``jtbd_segment`` + ``jtbd`` (situación gatillo, jobs,
+        dolor, deseo) para que el panel de personas responda con ese contexto.
+        """
         ...
 
     def explain_objections(
@@ -133,8 +159,36 @@ class HeuristicProfileGenerator:
     source = "heuristic"
 
     def generate_profiles(
-        self, idea: str, target_audience: str, n_profiles: int
+        self,
+        idea: str,
+        target_audience: str,
+        n_profiles: int,
+        segments: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
+        if segments:
+            # Fase 2.3: un arquetipo por segmento JTBD; los parámetros numéricos
+            # salen de las plantillas (cíclicamente) porque el heurístico no
+            # interpreta el texto — el enlace JTBD sí se conserva.
+            n = len(segments)
+            archetypes = []
+            for i, seg in enumerate(segments):
+                tpl = _ARCHETYPE_TEMPLATES[i % len(_ARCHETYPE_TEMPLATES)]
+                weights = {f: 0.5 for f in DEFAULT_FEATURES}
+                for driver in tpl["drivers"]:
+                    weights[driver] = 1.2
+                archetypes.append(
+                    {
+                        "name": seg.get("segment") or tpl["name"],
+                        "description": seg.get("main_pain") or seg.get("job_functional") or tpl["description"],
+                        "segment_share": round(1.0 / n, 4),
+                        "price_sensitivity": tpl["price_sensitivity"],
+                        "adoption_prob_base": tpl["adoption_prob_base"],
+                        "feature_weights": weights,
+                        "key_drivers": tpl["drivers"],
+                        **jtbd_link(seg),
+                    }
+                )
+            return archetypes
         n = max(1, min(n_profiles, len(_ARCHETYPE_TEMPLATES)))
         templates = _ARCHETYPE_TEMPLATES[:n]
         archetypes: list[dict[str, Any]] = []
@@ -200,17 +254,37 @@ class ClaudeProfileGenerator:
         self._fallback = HeuristicProfileGenerator()
 
     def generate_profiles(
-        self, idea: str, target_audience: str, n_profiles: int
+        self,
+        idea: str,
+        target_audience: str,
+        n_profiles: int,
+        segments: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         system = (
             "Eres un investigador de mercado experto en segmentación de audiencias. "
             "Respondes SIEMPRE con JSON válido, sin texto adicional."
         )
         features = ", ".join(DEFAULT_FEATURES)
+        if segments:
+            seg_txt = "\n".join(
+                f"{i + 1}. {s.get('segment', '')}: situación «{s.get('trigger_situation', '')}»; "
+                f"dolor «{s.get('main_pain', '')}»; deseo «{s.get('main_desire', '')}»; "
+                f"job funcional «{s.get('job_functional', '')}»"
+                for i, s in enumerate(segments)
+            )
+            task = (
+                f"Estos son los segmentos de demanda ya identificados (Jobs-to-be-Done):\n{seg_txt}\n\n"
+                f"Genera EXACTAMENTE {len(segments)} arquetipos, uno por segmento y EN ESE ORDEN, "
+                "usando el nombre del segmento como name. Estima segment_share (cuota de mercado "
+                "relativa entre ellos, suma ~1), price_sensitivity y adoption_prob_base coherentes "
+                "con su situación y su dolor."
+            )
+        else:
+            task = f"Genera {n_profiles} arquetipos de audiencia distintos."
         prompt = (
             f"Idea de producto: {idea}\n"
             f"Público objetivo: {target_audience}\n\n"
-            f"Genera {n_profiles} arquetipos de audiencia distintos. Devuelve un JSON "
+            f"{task} Devuelve un JSON "
             'con la forma {"archetypes": [...]}. Cada arquetipo debe tener exactamente '
             "estas claves:\n"
             "- name (str)\n- description (str, 1 frase)\n"
@@ -225,12 +299,17 @@ class ClaudeProfileGenerator:
             archetypes = data["archetypes"] if isinstance(data, dict) else data
             if not archetypes:
                 raise ValueError("Respuesta vacía de Claude.")
+            if segments:
+                # Enlace JTBD por posición (el prompt fija el orden); sobrantes se descartan.
+                archetypes = [
+                    {**a, **jtbd_link(seg)} for a, seg in zip(archetypes, segments, strict=False)
+                ]
             return archetypes
         except Exception as exc:  # noqa: BLE001 - fallback robusto
             logger.warning(
                 "Fallo al generar perfiles con Claude (%s). Uso heurística.", exc
             )
-            return self._fallback.generate_profiles(idea, target_audience, n_profiles)
+            return self._fallback.generate_profiles(idea, target_audience, n_profiles, segments)
 
     def explain_objections(
         self,
