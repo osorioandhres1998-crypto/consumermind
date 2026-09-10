@@ -9,7 +9,7 @@
 import Link from 'next/link';
 
 const TOOLS = [
-  { href: '/validator',     icon: '🧪', name: 'MVP Validator',                desc: 'Predice la aceptación del mercado con simulación Monte Carlo.', tag: 'Simulación' },
+  { href: '/validator',     icon: '🧪', name: 'MVP Validator',                desc: 'Evalúa tu idea, cuantifica lo que no sabes y diseña cómo validarla con clientes reales.', tag: 'Pre-validación' },
   { href: '/strategy',      icon: '🎯', name: 'Strategy',                     desc: 'Detecta los sesgos cognitivos que activarán a tu cliente.',     tag: 'IA' },
   { href: '/copy-studio',   icon: '✍️', name: 'Copy Studio',                  desc: 'Genera copy y ángulos que explotan esos sesgos.',               tag: 'IA' },
   { href: '/landing',       icon: '📊', name: 'Landing Analyzer',             desc: 'Audita cualquier landing: 41 checks + velocidad real de Google + semáforo ético.', tag: 'Auditoría' },

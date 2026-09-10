@@ -11,7 +11,7 @@ import { auth } from '../auth';
  */
 
 const TOOLS = [
-  { icon: '🧪', name: 'MVP Validator', desc: 'Simula miles de escenarios de mercado (Monte Carlo) y predice la aceptación de tu producto antes de invertir un peso en pauta.' },
+  { icon: '🧪', name: 'MVP Validator', desc: 'Evalúa tu idea con una rúbrica que declara su incertidumbre, simula la reacción de cada segmento y te dice qué experimento correr antes de invertir un peso en pauta.' },
   { icon: '🎯', name: 'Strategy', desc: 'Detecta los sesgos psicológicos que más activarán a TU cliente frente a TU producto, con tácticas concretas para cada uno.' },
   { icon: '✍️', name: 'Copy Studio', desc: 'Genera headlines, CTAs y ángulos creativos anclados a esos sesgos — no copy genérico.' },
   { icon: '📊', name: 'Landing Analyzer', desc: 'Audita tu landing contra 41 estándares de conversión + velocidad real de Google + semáforo ético de dark patterns (GDPR/DMA).' },
@@ -26,7 +26,7 @@ const STEPS = [
 
 const FAQS = [
   { q: '¿Necesito conocimientos técnicos?', a: 'No. Describes tu producto en lenguaje normal y las herramientas hacen el trabajo: simulaciones, análisis psicológico, auditorías y cálculos financieros.' },
-  { q: '¿Cómo predice la aceptación de un producto que aún no existe?', a: 'Con simulación Monte Carlo: genera arquetipos de tu público objetivo y corre miles de iteraciones de su reacción. Es una estimación estadística con intervalos de confianza — no una promesa, y así se presenta.' },
+  { q: '¿Cómo predice la aceptación de un producto que aún no existe?', a: 'No la predice, y lo dice claro. Evalúa la idea en 7 dimensiones con un rango de incertidumbre por cada una, propaga ese rango con Monte Carlo por segmento de audiencia, la contrasta con evidencia web y un panel de clientes simulados, y termina con los experimentos (entrevistas, smoke test, pre-venta) que sí la validan con clientes reales.' },
   { q: '¿Mis datos de campañas están seguros?', a: 'Los CSV de Meta/Google Ads se procesan en tu navegador: el archivo nunca se sube al servidor, solo el agregado mensual si decides guardarlo. Cada workspace está aislado a nivel de base de datos.' },
   { q: '¿El análisis de landing usa IA?', a: 'No — usa un motor determinista de reglas documentadas (basado en investigación de CRO), más los Core Web Vitals reales de Google. El mismo escaneo da siempre el mismo resultado, con la evidencia de cada hallazgo.' },
   { q: '¿Puedo trabajar con mi equipo o mis clientes?', a: 'Sí: invitaciones con roles (editor / solo lectura) y los informes PDF pueden llevar tu propia marca (marca blanca) si eres agencia.' },

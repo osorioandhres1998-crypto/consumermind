@@ -32,8 +32,8 @@
 
 ### Fase 3 — Cierre del ciclo
 | 3.1 | Recomendador de experimentos: smoke test de landing, fake door, pre-venta, entrevistas — con métrica objetivo y umbral de éxito por experimento. | ✅ |
-| 3.2 | Enlace con Landing Analyzer y Experimentos A/B del proyecto (la landing del smoke test se audita; el resultado se registra como experimento). | ⬜ |
-| 3.3 | Reposicionamiento de UI y copy: "Pre-validación de idea"; hipótesis marcadas; sin promesas de predicción. | ⬜ |
+| 3.2 | Enlace con Landing Analyzer y Experimentos A/B del proyecto (la landing del smoke test se audita; el resultado se registra como experimento). | ✅ |
+| 3.3 | Reposicionamiento de UI y copy: "Pre-validación de idea"; hipótesis marcadas; sin promesas de predicción. | ✅ |
 
 ### Fase 4 — Calibración con datos del workspace
 | 4.1 | Registrar resultado real (conversión del smoke test, pre-ventas) junto a la estimación → error de calibración por vertical. | ⬜ |

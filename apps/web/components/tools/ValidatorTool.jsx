@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getProject, apiFetch } from '../../lib/api';
+import { getProject, apiFetch, createExperiment } from '../../lib/api';
 import { track } from '../../lib/analytics';
 
 const OBJECTION_LABELS = {
@@ -395,7 +395,22 @@ function JtbdCard({ research }) {
 
 /* Fase 3.1 — cómo validar de verdad: experimentos con métrica y umbral. */
 function ExperimentsCard({ plan, projectId }) {
+  const [saved, setSaved] = useState({});
   if (!plan || !(plan.experiments || []).length) return null;
+  const register = async (e) => {
+    setSaved((s) => ({ ...s, [e.key]: 'saving' }));
+    try {
+      await createExperiment(projectId, {
+        hypothesis: `${e.name} — éxito si ${e.threshold}`,
+        metricName: e.metric.slice(0, 80),
+        variantALabel: 'Control (A)',
+        variantBLabel: 'Variante (B)',
+      });
+      setSaved((s) => ({ ...s, [e.key]: 'ok' }));
+    } catch (err) {
+      setSaved((s) => ({ ...s, [e.key]: 'error' }));
+    }
+  };
   return (
     <div className="card" style={{ marginBottom: 14, borderLeft: '3px solid var(--indigo)' }}>
       <h3 style={{ margin: '0 0 4px' }}>Cómo validarlo de verdad</h3>
@@ -409,6 +424,11 @@ function ExperimentsCard({ plan, projectId }) {
             <p style={{ margin: '4px 0' }}><b>Cómo:</b> {e.how}</p>
             <p style={{ margin: '4px 0' }}><b>Métrica:</b> {e.metric}</p>
             <p style={{ margin: '4px 0' }}><b>Éxito si:</b> <span className="tag green">{e.threshold}</span></p>
+            {projectId && (
+              <button type="button" className="btn ghost sm" style={{ marginTop: 6 }} disabled={saved[e.key] === 'saving' || saved[e.key] === 'ok'} onClick={() => register(e)}>
+                {saved[e.key] === 'ok' ? '✓ Registrado en Experimentos' : saved[e.key] === 'saving' ? 'Registrando…' : saved[e.key] === 'error' ? 'Error — reintentar' : '+ Registrar como experimento'}
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -487,7 +507,7 @@ export default function ValidatorTool({ projectId = null }) {
         </div>
       )}
       <div className="page-head">
-        <h1>🧪 MVP Validator</h1>
+        <h1>🧪 MVP Validator <span className="tag" style={{ verticalAlign: 'middle' }}>pre-validación</span></h1>
         <p>Evalúa tu idea con una rúbrica que declara su incertidumbre, y simula la reacción de la audiencia. Cuanto más contexto real aportes, más estrecho el rango.</p>
       </div>
 
